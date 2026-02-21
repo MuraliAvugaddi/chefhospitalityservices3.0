@@ -135,12 +135,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   color: const Color(0xffFADD73), // Deep food green
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: Color.fromARGB(255, 255, 255, 255),
+                    color: Color.fromARGB(255, 0, 0, 0),
                   ),
                 ),
                 child: const Icon(
                   Icons.receipt_long,
-                  color: Colors.white,
+                  color: Color.fromARGB(255, 0, 0, 0),
                   size: 22,
                 ),
               ),

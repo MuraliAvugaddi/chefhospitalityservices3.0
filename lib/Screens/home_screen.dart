@@ -80,7 +80,7 @@ class HomeScreen extends StatelessWidget {
                   color: const Color(0xffFADD73), // Deep food green
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: Color.fromARGB(255, 255, 255, 255),
+                    color: Color.fromARGB(255, 0, 0, 0),
                   ),
                   // boxShadow: [
                   //   BoxShadow(
@@ -92,7 +92,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 child: const Icon(
                   Icons.event_busy_rounded,
-                  color: Colors.white,
+                  color: Color.fromARGB(255, 0, 0, 0),
                   size: 22,
                 ),
               ),
@@ -185,31 +185,10 @@ class HomeScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 50),
-                  _buildFooter(),
                 ],
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFooter() {
-    return Container(
-      width: double.infinity,
-      color: const Color(0xFFFFC800),
-      padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 16),
-      child: Column(
-        children: [
-          Text("Download App",
-              style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  fontSize: 24)),
-          const SizedBox(height: 20),
-          // Your existing QR code display logic goes here
         ],
       ),
     );
