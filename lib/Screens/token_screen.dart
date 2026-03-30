@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:chefhospitalityservices/Controllers/profile_controller.dart';
 import 'package:chefhospitalityservices/Screens/Navigation_bar/new_main_screen.dart';
@@ -30,7 +30,7 @@ class _TokenScreenState extends State<TokenScreen> {
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   late Timer _timer;
-  int _countdown = 30; // 20 second countdown
+  int _countdown = 30; // 30 second countdown
 
   // --- AdMob State Variables ---
   NativeAd? _nativeAd;
@@ -40,13 +40,12 @@ class _TokenScreenState extends State<TokenScreen> {
   final String _androidAdUnitId = 'ca-app-pub-6236176751859838/9454234093';
   final String _iosAdUnitId = 'ca-app-pub-6236176751859838/9597704324';
 
-  // --- Test Ad IDs (Use these for testing to avoid account suspension) ---
-  // final String _androidAdUnitId = 'ca-app-pub-3940256099942544/2247696110';
-  // final String _iosAdUnitId = 'ca-app-pub-3940256099942544/3986624511';
-
-  // Get the correct Ad Unit ID for the platform
-  String get _nativeAdUnitId =>
-      Platform.isAndroid ? _androidAdUnitId : _iosAdUnitId;
+  String get _nativeAdUnitId {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return _androidAdUnitId;
+    }
+    return _iosAdUnitId;
+  }
   // --- End AdMob State ---
 
   @override
@@ -54,11 +53,12 @@ class _TokenScreenState extends State<TokenScreen> {
     super.initState();
     _playSound();
     _startTimer();
-    _loadAd(); // Load the ad
+    _loadAd();
   }
 
-  // --- ✅ 1. AD LOADING LOGIC ---
   void _loadAd() {
+    if (kIsWeb) return;
+
     setState(() {
       _isAdLoaded = false;
     });
@@ -68,8 +68,7 @@ class _TokenScreenState extends State<TokenScreen> {
       request: const AdRequest(),
       listener: NativeAdListener(
         onAdLoaded: (Ad ad) {
-          print('✅ Ad loaded.');
-          // Ensure the widget is still in the tree before calling setState
+          debugPrint('✅ Ad loaded.');
           if (mounted) {
             setState(() {
               _isAdLoaded = true;
@@ -77,27 +76,18 @@ class _TokenScreenState extends State<TokenScreen> {
           }
         },
         onAdFailedToLoad: (Ad ad, LoadAdError error) {
-          print('❌ Ad failed to load: $error');
+          debugPrint('❌ Ad failed to load: $error');
           ad.dispose();
         },
       ),
-
-      // --- ⭐️⭐️⭐️ THIS IS THE FIX ⭐️⭐️⭐️ ---
-      // This tells the ad to use a pre-built template style,
-      // which fixes the crash you were seeing.
       nativeTemplateStyle: NativeTemplateStyle(
-        templateType: TemplateType.medium, // 'medium' is a good size
-        // You can customize colors here if you want
-        // mainBackgroundColor: Colors.grey.shade200,
-        // cornerRadius: 10.0,
+        templateType: TemplateType.medium,
       ),
-      // --- ⭐️⭐️⭐️ END OF FIX ⭐️⭐️⭐️ ---
     )..load();
   }
 
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      // Check if mounted before calling setState
       if (mounted) {
         if (_countdown > 0) {
           setState(() {
@@ -105,10 +95,9 @@ class _TokenScreenState extends State<TokenScreen> {
           });
         } else {
           _timer.cancel();
-          Get.offAll(() => MainScreen());
+          Get.offAll(() => const MainScreen());
         }
       } else {
-        // If not mounted, just cancel the timer to prevent memory leaks
         _timer.cancel();
       }
     });
@@ -118,7 +107,7 @@ class _TokenScreenState extends State<TokenScreen> {
     try {
       await _audioPlayer.play(AssetSource('audio/success-221935.mp3'));
     } catch (e) {
-      print("Error playing sound: $e");
+      debugPrint("Error playing sound: $e");
     }
   }
 
@@ -126,13 +115,21 @@ class _TokenScreenState extends State<TokenScreen> {
   void dispose() {
     _timer.cancel();
     _audioPlayer.dispose();
-    _nativeAd?.dispose(); // Dispose the ad
+    _nativeAd?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final DateTime parsedDate = DateTime.parse(widget.generatedAt);
+    // ✅ FIX IS HERE: Added .toLocal() to convert server UTC time to the user's local device time.
+    // Also added a try-catch fallback to DateTime.now() just in case the string is empty or invalid.
+    DateTime parsedDate;
+    try {
+      parsedDate = DateTime.parse(widget.generatedAt).toLocal();
+    } catch (e) {
+      parsedDate = DateTime.now(); // Fallback to current device time
+    }
+
     final String formattedDate = DateFormat(
       'dd MMMM, hh:mm a',
     ).format(parsedDate);
@@ -233,7 +230,6 @@ class _TokenScreenState extends State<TokenScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
-
                 Text(
                   'Closing $_countdown seconds...',
                   style: GoogleFonts.poppins(
@@ -242,34 +238,27 @@ class _TokenScreenState extends State<TokenScreen> {
                     color: Colors.red.shade700,
                   ),
                 ),
-
-                // --- ✅ 2. AD WIDGET CONTAINER ---
-                // This checks if the ad is loaded and displays it.
-                if (_nativeAd != null && _isAdLoaded)
-                  Container(
-                    // Using a Key ensures the widget rebuilds if the ad object changes
-                    key: ValueKey(_nativeAd.hashCode),
-                    width: double.infinity,
-                    // You MUST provide a height constraint for the ad.
-                    // 340 is a good height for 'TemplateType.medium'
-                    height: 340,
-                    margin: const EdgeInsets.symmetric(vertical: 10),
-                    alignment: Alignment.center,
-                    child: AdWidget(ad: _nativeAd!),
-                  )
-                else
-                  // Placeholder while ad loads
-                  Container(
-                    height: 340,
-                    width: double.infinity,
-                    margin: const EdgeInsets.symmetric(vertical: 10),
-                    alignment: Alignment.center,
-                    child: const Center(
-                      // You can use a CircularProgressIndicator or just text
-                      child: Text("Loading ad..."),
+                if (!kIsWeb) ...[
+                  if (_nativeAd != null && _isAdLoaded)
+                    Container(
+                      key: ValueKey(_nativeAd.hashCode),
+                      width: double.infinity,
+                      height: 340,
+                      margin: const EdgeInsets.symmetric(vertical: 10),
+                      alignment: Alignment.center,
+                      child: AdWidget(ad: _nativeAd!),
+                    )
+                  else
+                    Container(
+                      height: 340,
+                      width: double.infinity,
+                      margin: const EdgeInsets.symmetric(vertical: 10),
+                      alignment: Alignment.center,
+                      child: const Center(
+                        child: Text("Loading ad..."),
+                      ),
                     ),
-                  ),
-                // --- End Ad Widget Container ---
+                ]
               ],
             ),
           ),

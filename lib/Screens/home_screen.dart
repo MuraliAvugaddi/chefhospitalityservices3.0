@@ -14,6 +14,93 @@ class HomeScreen extends StatelessWidget {
   final ProfileController controller = Get.find<ProfileController>();
   final NetworkController networkController = Get.put(NetworkController());
 
+  // ✅ NEW: Logic to check if the current time matches the meal type
+  bool _isWithinTimeSlot(String mealType) {
+    final now = DateTime.now();
+    final currentTime =
+        now.hour * 60 + now.minute; // Total minutes from midnight
+
+    switch (mealType) {
+      case "Breakfast":
+        return currentTime >= (7 * 60 + 50) && currentTime <= (10 * 60 + 10);
+      case "Lunch":
+        return currentTime >= (11 * 60 + 50) && currentTime <= (14 * 60);
+      case "Snacks":
+        return currentTime >= (16 * 60 + 50) && currentTime <= (18 * 60);
+      case "Dinner":
+        return currentTime >= (19 * 60 + 50) && currentTime <= (21 * 60 + 30);
+      default:
+        return false;
+    }
+  }
+
+  // ✅ NEW: Beautiful UI Dialog for time restriction
+  void _showTimeRestrictionDialog(String mealType, String allowedTime) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.access_time_filled_rounded,
+                    size: 50, color: Colors.orange),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                "Not Time for $mealType",
+                style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700, fontSize: 18),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "You can only generate this token during the designated service time:",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(color: Colors.black54, fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xffFADD73),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  allowedTime,
+                  style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700, color: Colors.black),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Get.back(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xff1F2726),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text("GOT IT"),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _handleNavigation(String mealType) {
     if (networkController.isOffline.value) {
       Get.snackbar(
@@ -26,11 +113,22 @@ class HomeScreen extends StatelessWidget {
       return;
     }
 
-    // ✅ FIXED LOGIC: Use isSubscriptionActive instead of just isApproved
+    // ✅ FIXED: First check if it is the correct time for this meal
+    String allowedTime = "";
+    if (mealType == "Breakfast") allowedTime = "8:00 AM - 9:00 AM";
+    if (mealType == "Lunch") allowedTime = "12:00 PM - 2:00 PM";
+    if (mealType == "Snacks") allowedTime = "5:00 PM - 6:00 PM";
+    if (mealType == "Dinner") allowedTime = "8:00 PM - 9:00 PM";
+
+    if (!_isWithinTimeSlot(mealType)) {
+      _showTimeRestrictionDialog(mealType, allowedTime);
+      return; // Stop here if it's the wrong time
+    }
+
+    // ✅ Subscription check logic
     if (controller.isSubscriptionActive) {
       Get.to(() => ScannerScreen(mealType: mealType));
     } else {
-      // Access Denied - Show payment prompt
       Get.snackbar(
         "Subscription Expired",
         "Please pay your mess fees to access tokens for this month.",
@@ -77,18 +175,11 @@ class HomeScreen extends StatelessWidget {
                 height: 40,
                 width: 40,
                 decoration: BoxDecoration(
-                  color: const Color(0xffFADD73), // Deep food green
+                  color: const Color(0xffFADD73),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: Color.fromARGB(255, 0, 0, 0),
+                    color: const Color.fromARGB(255, 0, 0, 0),
                   ),
-                  // boxShadow: [
-                  //   BoxShadow(
-                  //     color: Colors.black.withOpacity(0.12),
-                  //     blurRadius: 8,
-                  //     offset: const Offset(0, 4),
-                  //   ),
-                  // ],
                 ),
                 child: const Icon(
                   Icons.event_busy_rounded,
@@ -98,7 +189,6 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
           ),
-          // ✅ ADDED: Visual status indicator in AppBar
           Obx(() => Container(
                 margin: const EdgeInsets.only(right: 15),
                 child: Icon(
@@ -139,7 +229,7 @@ class HomeScreen extends StatelessWidget {
                     child: Column(
                       children: [
                         Text(
-                          "Welcome to Chef Hospitality Services!",
+                          "Welcome to Chef Hospitality!",
                           style: GoogleFonts.poppins(
                             fontWeight: FontWeight.w700,
                             color: Colors.black,
@@ -151,7 +241,7 @@ class HomeScreen extends StatelessWidget {
                         const SizedBox(height: 18),
                         MealCard(
                           mealType: "Breakfast",
-                          time: "8:00 AM - 9:30 AM",
+                          time: "8:00 AM - 9:00 AM",
                           imagePath: "assets/images/breakfast.png",
                           cardColor: const Color(0xffFADD73),
                           onTap: () => _handleNavigation("Breakfast"),
@@ -159,7 +249,7 @@ class HomeScreen extends StatelessWidget {
                         const SizedBox(height: 12),
                         MealCard(
                           mealType: "Lunch",
-                          time: "12:30 PM - 2:00 PM",
+                          time: "12:00 PM - 2:00 PM",
                           imagePath: "assets/images/lunch.png",
                           cardColor: const Color(0xffC6E4AD),
                           onTap: () => _handleNavigation("Lunch"),
@@ -175,7 +265,7 @@ class HomeScreen extends StatelessWidget {
                         const SizedBox(height: 12),
                         MealCard(
                           mealType: "Dinner",
-                          time: "8:00 PM - 9:30 PM",
+                          time: "8:00 PM - 9:00 PM",
                           imagePath: "assets/images/dinner.png",
                           cardColor: const Color(0xffC6E4AD),
                           onTap: () => _handleNavigation("Dinner"),
@@ -194,8 +284,8 @@ class HomeScreen extends StatelessWidget {
     );
   }
 }
-// ------------------- (Your MealCard widget is unchanged) -------------------
 
+// ------------------- (MealCard Widget Remains the Same) -------------------
 class MealCard extends StatelessWidget {
   final String mealType;
   final String time;
@@ -224,7 +314,7 @@ class MealCard extends StatelessWidget {
           color: cardColor,
           boxShadow: [
             BoxShadow(
-              color: cardColor.withValues(alpha: 0.4),
+              color: cardColor.withOpacity(0.4),
               spreadRadius: 1,
               blurRadius: 5,
               offset: const Offset(0, 3),
@@ -249,11 +339,8 @@ class MealCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(
-                        Icons.access_time,
-                        size: 16,
-                        color: Colors.black54,
-                      ),
+                      const Icon(Icons.access_time,
+                          size: 16, color: Colors.black54),
                       const SizedBox(width: 5),
                       Text(
                         time,
@@ -271,7 +358,7 @@ class MealCard extends StatelessWidget {
             Container(
               width: 2,
               height: 60,
-              color: Colors.black.withValues(alpha: 0.2),
+              color: Colors.black.withOpacity(0.2),
               margin: const EdgeInsets.symmetric(horizontal: 10),
             ),
             ClipRRect(
@@ -281,17 +368,13 @@ class MealCard extends StatelessWidget {
                 width: 70,
                 height: 70,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 70,
-                    height: 70,
-                    color: Colors.grey,
-                    child: const Icon(
-                      Icons.image_not_supported,
-                      color: Colors.white,
-                    ),
-                  );
-                },
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 70,
+                  height: 70,
+                  color: Colors.grey,
+                  child: const Icon(Icons.image_not_supported,
+                      color: Colors.white),
+                ),
               ),
             ),
             const SizedBox(width: 10),
@@ -302,11 +385,8 @@ class MealCard extends StatelessWidget {
               ),
               child: const Padding(
                 padding: EdgeInsets.all(10),
-                child: Icon(
-                  Icons.arrow_forward_ios,
-                  size: 20,
-                  color: Colors.white,
-                ),
+                child: Icon(Icons.arrow_forward_ios,
+                    size: 20, color: Colors.white),
               ),
             ),
           ],

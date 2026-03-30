@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
-import 'dart:io';
-import 'package:google_mobile_ads/google_mobile_ads.dart'; // ✅ NEW: Import ads
+import 'package:flutter/foundation.dart'; // ✅ FIXED: Replaced dart:io with foundation
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class ScannerScreen extends StatefulWidget {
   final String mealType;
@@ -21,18 +21,16 @@ class _ScannerScreenState extends State<ScannerScreen> {
   bool _isScanComplete = false;
   final ApiService _apiService = ApiService();
 
-  // --- ✅ NEW: Ad-related variables ---
+  // --- Ad-related variables ---
   BannerAd? _topBannerAd;
   bool _isTopBannerLoaded = false;
   BannerAd? _bottomBannerAd;
   bool _isBottomBannerLoaded = false;
 
-  // Using Google's official Test Ad IDs
   final String _androidAdUnitId = 'ca-app-pub-3940256099942544/6300978111';
   final String _iosAdUnitId = 'ca-app-pub-3940256099942544/2934735716';
-  // --- End of Ad-related variables ---
 
-  // --- TIME VALIDATION LOGIC (Unchanged) ---
+  // --- TIME VALIDATION LOGIC ---
   bool isTimeValidForMeal() {
     final now = DateTime.now();
     final hour = now.hour;
@@ -40,32 +38,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
     final currentTimeInMinutes = hour * 60 + minute;
 
     switch (widget.mealType) {
-      // case "Breakfast":
-      //   return currentTimeInMinutes >= (7 * 60 + 50) &&
-      //       currentTimeInMinutes <= (9 * 60 + 10);
-      // case "Lunch":
-      //   return currentTimeInMinutes >= (11 * 60 + 50) &&
-      //       currentTimeInMinutes <= (14 * 60 + 10);
-      // case "Snacks":
-      //   return currentTimeInMinutes >= (16 * 60 + 50) &&
-      //       currentTimeInMinutes <= (18 * 60 + 10);
-      // case "Dinner":
-      //   return currentTimeInMinutes >= (19 * 60 + 50) &&
-      //       currentTimeInMinutes <= (21 * 60 + 30);
       case "Breakfast":
         return currentTimeInMinutes >= (00 * 60 + 00) &&
             currentTimeInMinutes <= (24 * 60 + 00);
-
-      // case "Lunch":
-      //   return currentTimeInMinutes >= (11 * 60 + 50) &&
-      //       currentTimeInMinutes <= (14 * 60 + 10);
-      // case "Snacks":
-      //   return currentTimeInMinutes >= (16 * 60 + 50) &&
-      //       currentTimeInMinutes <= (18 * 60 + 10);
-      // case "Dinner":
-      //   return currentTimeInMinutes >= (19 * 60 + 50) &&
-      //       currentTimeInMinutes <= (21 * 60 + 30);
-
       case "Lunch":
         return currentTimeInMinutes >= (00 * 60 + 00) &&
             currentTimeInMinutes <= (24 * 60 + 00);
@@ -83,14 +58,17 @@ class _ScannerScreenState extends State<ScannerScreen> {
   @override
   void initState() {
     super.initState();
-    // ✅ NEW: Load both ads
     _loadTopBannerAd();
     _loadBottomBannerAd();
   }
 
-  // --- ✅ NEW: Ad loading functions ---
+  // --- ✅ FIXED: Ad loading functions made web-safe ---
   void _loadTopBannerAd() {
-    String adUnitId = Platform.isAndroid ? _androidAdUnitId : _iosAdUnitId;
+    if (kIsWeb) return; // Skip ad loading on Web
+
+    String adUnitId = defaultTargetPlatform == TargetPlatform.android
+        ? _androidAdUnitId
+        : _iosAdUnitId;
     _topBannerAd = BannerAd(
       adUnitId: adUnitId,
       request: const AdRequest(),
@@ -110,7 +88,11 @@ class _ScannerScreenState extends State<ScannerScreen> {
   }
 
   void _loadBottomBannerAd() {
-    String adUnitId = Platform.isAndroid ? _androidAdUnitId : _iosAdUnitId;
+    if (kIsWeb) return; // Skip ad loading on Web
+
+    String adUnitId = defaultTargetPlatform == TargetPlatform.android
+        ? _androidAdUnitId
+        : _iosAdUnitId;
     _bottomBannerAd = BannerAd(
       adUnitId: adUnitId,
       request: const AdRequest(),
@@ -128,13 +110,13 @@ class _ScannerScreenState extends State<ScannerScreen> {
       ),
     )..load();
   }
-  // --- End of ad loading functions ---
 
   @override
   void reassemble() {
     super.reassemble();
     if (controller != null) {
-      if (Platform.isAndroid) {
+      // ✅ FIXED: Prevented crash during hot reload on web
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
         controller!.pauseCamera();
       }
       controller!.resumeCamera();
@@ -199,23 +181,18 @@ class _ScannerScreenState extends State<ScannerScreen> {
     }
   }
 
-  // ✅ CHANGED: Helper widget for building the ad container
   Widget _buildAdContainer(BannerAd? ad, bool isLoaded) {
     return Container(
       alignment: Alignment.center,
       height: 50.0,
       width: double.infinity,
-      // ✅ CHANGED: Placeholder is now transparent
       color: Colors.transparent,
-      child: isLoaded
-          ? AdWidget(ad: ad!)
-          : Container(), // ✅ CHANGED: Show an empty container
+      child: isLoaded ? AdWidget(ad: ad!) : Container(),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // --- ✅ MODIFIED BUILD PATH 1: Time Invalid Screen ---
     if (!isTimeValidForMeal()) {
       return Scaffold(
         backgroundColor: Colors.white,
@@ -228,15 +205,13 @@ class _ScannerScreenState extends State<ScannerScreen> {
               color: const Color.fromARGB(255, 0, 0, 0),
             ),
           ),
-          backgroundColor: Color(0xffFADD73),
+          backgroundColor: const Color(0xffFADD73),
         ),
-        // ✅ CHANGED: Body is now a Column to hold ads and content
         body: Column(
           children: [
-            // ✅ TOP AD
-            _buildAdContainer(_topBannerAd, _isTopBannerLoaded),
+            // ✅ Hide Ad container completely on web
+            if (!kIsWeb) _buildAdContainer(_topBannerAd, _isTopBannerLoaded),
 
-            // ✅ CONTENT (Original body wrapped in Expanded)
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
@@ -265,29 +240,22 @@ class _ScannerScreenState extends State<ScannerScreen> {
               ),
             ),
 
-            // ✅ BOTTOM AD
-            _buildAdContainer(_bottomBannerAd, _isBottomBannerLoaded),
+            if (!kIsWeb)
+              _buildAdContainer(_bottomBannerAd, _isBottomBannerLoaded),
           ],
         ),
       );
     }
 
-    // --- ✅ MODIFIED BUILD PATH 2: QR Scanner Screen ---
     return Scaffold(
-      // ✅ CHANGED: Set background to black to match camera feed
       backgroundColor: Colors.black,
-      // ✅ CHANGED: Body is now a Column to hold ads and scanner
       body: Column(
         children: <Widget>[
-          // ✅ TOP AD
-          // We use SafeArea here to avoid the status bar,
-          // but only for the top ad container
-          SafeArea(
-            bottom: false, // Don't apply padding to the bottom
-            child: _buildAdContainer(_topBannerAd, _isTopBannerLoaded),
-          ),
-
-          // ✅ CONTENT (Original Stack wrapped in Expanded)
+          if (!kIsWeb)
+            SafeArea(
+              bottom: false,
+              child: _buildAdContainer(_topBannerAd, _isTopBannerLoaded),
+            ),
           Expanded(
             child: Stack(
               alignment: Alignment.center,
@@ -320,7 +288,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.5),
+                      color: Colors.black
+                          .withOpacity(0.5), // ✅ Fixed opacity warning
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Text(
@@ -332,14 +301,11 @@ class _ScannerScreenState extends State<ScannerScreen> {
               ],
             ),
           ),
-
-          // ✅ BOTTOM AD
-          // We use SafeArea here to avoid the home bar (on iOS)
-          // but only for the bottom ad container
-          SafeArea(
-            top: false, // Don't apply padding to the top
-            child: _buildAdContainer(_bottomBannerAd, _isBottomBannerLoaded),
-          ),
+          if (!kIsWeb)
+            SafeArea(
+              top: false,
+              child: _buildAdContainer(_bottomBannerAd, _isBottomBannerLoaded),
+            ),
         ],
       ),
     );
@@ -348,7 +314,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
   @override
   void dispose() {
     controller?.dispose();
-    // ✅ NEW: Dispose both ads
     _topBannerAd?.dispose();
     _bottomBannerAd?.dispose();
     super.dispose();

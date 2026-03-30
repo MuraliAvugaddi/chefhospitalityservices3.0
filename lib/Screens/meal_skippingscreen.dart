@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../Controllers/MealSkipController.dart'; // ✅ Ensure this path is correct
+import '../Controllers/MealSkipController.dart';
 
 class MealSkippingscreen extends StatefulWidget {
   const MealSkippingscreen({super.key});
@@ -14,14 +14,175 @@ class MealSkippingscreen extends StatefulWidget {
 class _MealSkippingscreenState extends State<MealSkippingscreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  // ✅ Initialize the Controller to manage state and logic
   final MealSkipController controller = Get.put(MealSkipController());
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+  }
+
+  // ✅ UPDATED: Responsive and Polished Confirmation Dialog
+  void _showConfirmationDialog() {
+    Get.dialog(
+      Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 25),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        clipBehavior: Clip.antiAlias, // Ensures clean corners
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 1. Header with Background Pattern/Color
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 30),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withOpacity(0.08),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
+                        )
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.no_food_rounded,
+                      size: 40,
+                      color: Colors.redAccent,
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  Text(
+                    "Skip this meal?",
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 22,
+                      color: const Color(0xff1A1A1A),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 2. Content Body
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              child: Column(
+                children: [
+                  RichText(
+                    textAlign: TextAlign.center,
+                    text: TextSpan(
+                      style: GoogleFonts.poppins(
+                        color: Colors.black54,
+                        fontSize: 15,
+                        height: 1.6,
+                      ),
+                      children: [
+                        const TextSpan(text: "You are about to skip "),
+                        TextSpan(
+                          text: controller.selectedMeal.value.toUpperCase(),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const TextSpan(text: " on\n"),
+                        TextSpan(
+                          text: DateFormat('EEEE, MMM dd')
+                              .format(controller.selectedDate.value),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xff1A1A1A),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 25),
+
+                  // 3. Action Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Get.back(),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: Text(
+                            "Not now",
+                            style: GoogleFonts.poppins(
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Get.back();
+                            controller.submitSkip();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xff1A1A1A),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: Text(
+                            "Yes, Skip",
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // 4. Footer Note
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.info_outline,
+                          size: 14, color: Colors.grey),
+                      const SizedBox(width: 6),
+                      Text(
+                        "You won't get a token for this meal.",
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: Colors.grey[500],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      barrierDismissible: false,
+    );
   }
 
   @override
@@ -64,14 +225,13 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
           _mealTypeGrid(),
           const SizedBox(height: 40),
 
-          // ✅ Submit Button connected to Controller state
           Obx(() => SizedBox(
                 width: double.infinity,
                 height: 60,
                 child: ElevatedButton(
                   onPressed: controller.isLoading.value
                       ? null
-                      : () => controller.submitSkip(),
+                      : () => _showConfirmationDialog(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.black,
                     shape: RoundedRectangleBorder(
@@ -79,19 +239,40 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
                   ),
                   child: controller.isLoading.value
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text("Confirm Skipping",
-                          style: TextStyle(
+                      : Text("Confirm Skipping",
+                          style: GoogleFonts.poppins(
                               color: Colors.white,
                               fontSize: 18,
                               fontWeight: FontWeight.bold)),
                 ),
               )),
 
-          const SizedBox(height: 20),
-          const Text(
-              "Note: Skips for tomorrow must be submitted before 11:00 PM tonight.",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontSize: 12)),
+          const SizedBox(height: 25),
+
+          // ✅ IMPROVED: Better Note Design for clarity
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade50,
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: const Color(0xffFADD73), width: 1),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_rounded, color: Colors.orange),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "IMPORTANT: Skips for tomorrow must be submitted before 11:00 PM tonight.",
+                    style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -120,8 +301,8 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
             Obx(() => Text(
                 DateFormat('EEEE, dd MMMM yyyy')
                     .format(controller.selectedDate.value),
-                style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.w600))),
+                style: GoogleFonts.poppins(
+                    fontSize: 15, fontWeight: FontWeight.w600))),
           ],
         ),
       ),
@@ -143,74 +324,89 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
         return Obx(() {
           bool isSel = controller.selectedMeal.value == m;
           return ChoiceChip(
-            label: Text(m),
+            label: Text(m,
+                style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w500,
+                    color: isSel ? Colors.black : Colors.black54)),
             selected: isSel,
             onSelected: (v) => controller.selectedMeal.value = m,
             selectedColor: const Color(0xffFADD73),
             backgroundColor: Colors.white,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           );
         });
       }).toList(),
     );
   }
 
-  // --- 2. HISTORY TAB WITH DASHBOARD ---
+  // --- 2. HISTORY TAB ---
   Widget _buildHistoryTab() {
     return Obx(() {
       if (controller.isLoading.value && controller.historyList.isEmpty) {
         return const Center(
             child: CircularProgressIndicator(color: Color(0xffFFC800)));
       }
-
-      return Column(
-        children: [
-          // ✅ NEW: User Personal Savings Dashboard
-          Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color(0xff1A1A1A), // Sleek Modern Dark
-              borderRadius: BorderRadius.circular(25),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5))
-              ],
-            ),
-            child: Column(
-              children: [
-                Text("Your Saved Meals This Month",
-                    style: GoogleFonts.poppins(
-                        color: Colors.white70, fontSize: 12)),
-                const SizedBox(height: 15),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _miniStat("B", controller.getHistoryCount("Breakfast")),
-                    _miniStat("L", controller.getHistoryCount("Lunch")),
-                    _miniStat("S", controller.getHistoryCount("Snacks")),
-                    _miniStat("D", controller.getHistoryCount("Dinner")),
-                    _miniStat("Total", controller.totalHistorySkips),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          Expanded(
-            child: controller.historyList.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: controller.historyList.length,
-                    itemBuilder: (context, index) {
-                      final skip = controller.historyList[index];
-                      return _buildSkipHistoryCard(skip);
-                    },
+      return RefreshIndicator(
+        onRefresh: () => controller.fetchInitialSkips(),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xff1A1A1A),
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5))
+                ],
+              ),
+              child: Column(
+                children: [
+                  Text("Your Saved Meals This Month",
+                      style: GoogleFonts.poppins(
+                          color: Colors.white70, fontSize: 12)),
+                  const SizedBox(height: 15),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _miniStat("B", controller.getHistoryCount("Breakfast")),
+                      _miniStat("L", controller.getHistoryCount("Lunch")),
+                      _miniStat("S", controller.getHistoryCount("Snacks")),
+                      _miniStat("D", controller.getHistoryCount("Dinner")),
+                      _miniStat("Total", controller.totalHistorySkips),
+                    ],
                   ),
-          ),
-        ],
+                ],
+              ),
+            ),
+            Expanded(
+              child: controller.historyList.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                      controller: controller.scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: controller.historyList.length +
+                          (controller.isMoreLoading.value ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == controller.historyList.length) {
+                          return const Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Center(
+                                  child: CircularProgressIndicator(
+                                      color: Color(0xffFFC800))));
+                        }
+                        return _buildSkipHistoryCard(
+                            controller.historyList[index]);
+                      },
+                    ),
+            ),
+          ],
+        ),
       );
     });
   }
@@ -238,7 +434,6 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
     Color iconColor;
     Color bgColor;
 
-    // Use a helper to determine UI styling based on meal type
     switch (skip['mealType']) {
       case 'Breakfast':
         mealIcon = Icons.wb_sunny_outlined;
@@ -273,7 +468,7 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
+              color: Colors.black.withOpacity(0.05),
               blurRadius: 5,
               offset: const Offset(0, 2))
         ],
@@ -298,25 +493,24 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
                     GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
           ],
         ),
-        trailing: Text(
-          skip['month'].toString().split(' ')[0],
-          style: GoogleFonts.poppins(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[400]),
-        ),
+        trailing: Text(skip['month'].toString().split(' ')[0],
+            style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[400])),
       ),
     );
   }
 
   Widget _buildEmptyState() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return ListView(
       children: [
+        SizedBox(height: MediaQuery.of(context).size.height * 0.2),
         Icon(Icons.no_meals_outlined, size: 80, color: Colors.grey[300]),
         const SizedBox(height: 16),
-        Text("No skipped meals found.",
-            style: GoogleFonts.poppins(color: Colors.grey[500])),
+        Center(
+            child: Text("No skipped meals found.",
+                style: GoogleFonts.poppins(color: Colors.grey[500]))),
       ],
     );
   }

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart'; // ✅ Required for Colors in snackbar
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
@@ -6,72 +6,111 @@ import '../services/api_service.dart';
 class MealSkipController extends GetxController {
   final ApiService _apiService = ApiService();
 
+  // Scroll Controller for Infinite Scroll
+  final ScrollController scrollController = ScrollController();
+
   var historyList = <dynamic>[].obs;
   var isLoading = false.obs;
+  var isMoreLoading = false.obs; // Loader for bottom pagination
 
   var selectedDate = DateTime.now().add(const Duration(days: 1)).obs;
   var selectedMeal = "Full Day".obs;
 
+  // Pagination Variables
+  var currentPage = 1.obs;
+  var hasMoreData = true.obs;
+
   @override
   void onInit() {
     super.onInit();
-    fetchMySkipHistory();
+    fetchInitialSkips();
+
+    // Listen to scroll events
+    scrollController.addListener(() {
+      if (scrollController.position.pixels >=
+          scrollController.position.maxScrollExtent - 200) {
+        fetchMoreSkips();
+      }
+    });
   }
 
-  // ✅ NEW: Helper methods to calculate history breakdown for the UI
+  @override
+  void onClose() {
+    scrollController.dispose();
+    super.onClose();
+  }
+
   int getHistoryCount(String type) {
     return historyList.where((item) => item['mealType'] == type).length;
   }
 
   int get totalHistorySkips => historyList.length;
 
-  // --- SUBMIT SKIP LOGIC ---
-  Future<void> submitSkip() async {
+  // --- 1. INITIAL FETCH ---
+  Future<void> fetchInitialSkips() async {
     try {
       isLoading(true);
-      final dateStr = DateFormat('yyyy-MM-dd').format(selectedDate.value);
-      
-      // Explicitly cast the response to Map for type safety
-      final Map<String, dynamic> res = await _apiService.submitMealSkip(dateStr, selectedMeal.value) as Map<String, dynamic>;
-      
-      if (res['success'] == true) {
-        Get.snackbar(
-          "Success", 
-          res['message']?.toString() ?? "Meal skipped successfully", 
-          backgroundColor: Colors.green, 
-          colorText: Colors.white,
-          snackPosition: SnackPosition.BOTTOM,
-        );
-        fetchMySkipHistory(); // Refresh the history tab automatically
-      } else {
-        Get.snackbar(
-          "Action Denied", 
-          res['message']?.toString() ?? "Failed to skip meal", 
-          backgroundColor: Colors.red, 
-          colorText: Colors.white,
-          snackPosition: SnackPosition.BOTTOM,
-        );
+      currentPage.value = 1;
+      hasMoreData.value = true;
+
+      final Map<String, dynamic> res = await _apiService.getMySkips(page: 1);
+
+      if (res['success'] == true && res['skips'] != null) {
+        List data = res['skips'];
+        historyList.assignAll(data);
+        // If back-end sends less than 15, assume no more pages
+        if (data.length < 15) hasMoreData.value = false;
       }
     } catch (e) {
-      Get.snackbar("Error", "Something went wrong connecting to server", backgroundColor: Colors.orange);
+      debugPrint("Error fetching skips: $e");
     } finally {
       isLoading(false);
     }
   }
 
-  // --- FETCH HISTORY LOGIC ---
-  Future<void> fetchMySkipHistory() async {
+  // --- 2. LOAD MORE FETCH ---
+  Future<void> fetchMoreSkips() async {
+    if (isMoreLoading.value || !hasMoreData.value || isLoading.value) return;
+
     try {
-      isLoading(true);
-      
-      // Explicitly cast the response to Map for type safety
-      final Map<String, dynamic> res = await _apiService.getMySkips() as Map<String, dynamic>;
-      
+      isMoreLoading(true);
+      int nextPage = currentPage.value + 1;
+      final Map<String, dynamic> res = await _apiService.getMySkips(page: nextPage);
+
       if (res['success'] == true && res['skips'] != null) {
-        historyList.assignAll(res['skips']);
+        List newItems = res['skips'];
+        if (newItems.isEmpty) {
+          hasMoreData.value = false;
+        } else {
+          historyList.addAll(newItems);
+          currentPage.value = nextPage;
+          if (newItems.length < 15) hasMoreData.value = false;
+        }
       }
     } catch (e) {
-      debugPrint("Error fetching skips: $e");
+      debugPrint("Error loading more skips: $e");
+    } finally {
+      isMoreLoading(false);
+    }
+  }
+
+  // --- 3. SUBMIT SKIP ---
+  Future<void> submitSkip() async {
+    try {
+      isLoading(true);
+      final dateStr = DateFormat('yyyy-MM-dd').format(selectedDate.value);
+      final Map<String, dynamic> res = await _apiService.submitMealSkip(dateStr, selectedMeal.value);
+
+      if (res['success'] == true) {
+        Get.snackbar("Success", res['message'] ?? "Meal skipped",
+            backgroundColor: Colors.green, colorText: Colors.white);
+        fetchInitialSkips(); // Refresh list after new skip
+      } else {
+        Get.snackbar("Denied", res['message'] ?? "Failed",
+            backgroundColor: Colors.red, colorText: Colors.white);
+      }
+    } catch (e) {
+      Get.snackbar("Error", "Server Error", backgroundColor: Colors.orange);
     } finally {
       isLoading(false);
     }

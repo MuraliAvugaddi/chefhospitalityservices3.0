@@ -1,4 +1,5 @@
 import 'package:chefhospitalityservices/Controllers/auth_controller.dart';
+import 'package:chefhospitalityservices/Screens/auth/signup_step1_screen.dart';
 import 'package:chefhospitalityservices/widgets/custom_textfield.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -96,21 +97,21 @@ class SigninScreen extends StatelessWidget {
                   ),
 
                   // Forgot Password
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {/* Navigate to forgot password */},
-                      child: Text(
-                        'Forgot Password?',
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xffFFC800),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
+                  // Align(
+                  //   alignment: Alignment.centerRight,
+                  //   child: TextButton(
+                  //     onPressed: () {/* Navigate to forgot password */},
+                  //     child: Text(
+                  //       'Forgot Password?',
+                  //       style: GoogleFonts.poppins(
+                  //         color: const Color(0xffFFC800),
+                  //         fontWeight: FontWeight.w600,
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 28),
 
                   // Sign In Button
                   Obx(() => SizedBox(
@@ -157,7 +158,7 @@ class SigninScreen extends StatelessWidget {
                       ),
                       GestureDetector(
                         onTap: () =>
-                            Get.toNamed('/signup'), // Adjust route name
+                            Get.to(SignupStep1Screen()), // Adjust route name
                         child: Text(
                           "Sign Up",
                           style: GoogleFonts.poppins(

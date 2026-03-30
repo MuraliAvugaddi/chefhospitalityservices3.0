@@ -6,18 +6,41 @@ import 'package:google_fonts/google_fonts.dart';
 class MyChoiceWidget extends StatelessWidget {
   const MyChoiceWidget({super.key});
 
+  void _showLockedDialog() {
+    showCupertinoDialog(
+      context: Get.context!,
+      builder: (context) => CupertinoAlertDialog(
+        title: Text(
+          "Coming Soon",
+          style: TextStyle(color: CupertinoColors.activeBlue),
+        ),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: Text(
+            "My Choice access will open very soon for Day Scholars.",
+            style: TextStyle(fontSize: 16),
+          ),
+        ),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text("OK"),
+            onPressed: () => Get.back(),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // double screenWidth = MediaQuery.of(context).size.width; // Get screen width
-
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(34),
-        border: Border.all(color: Color(0xffE3E3E3), width: 2),
+        border: Border.all(color: const Color(0xffE3E3E3), width: 2),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -31,488 +54,161 @@ class MyChoiceWidget extends StatelessWidget {
                 ),
               ),
             ),
-            SizedBox(height: 16),
-            SizedBox(height: 6),
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: "Note:",
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xff757474),
-                      fontSize: 12, // ₹3600 font size
-                    ),
-                  ),
-                  TextSpan(
-                    text: " This service is not intended for hostels",
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w500,
-                      color: Color.fromARGB(
-                        255,
-                        159,
-                        159,
-                        159,
-                      ), //  // Yellow color
-                      fontSize: 12, // /Month font size
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 16),
-            InkWell(
-              onTap: () {
-                showCupertinoDialog(
-                  context: Get.context!,
-                  builder: (context) => CupertinoAlertDialog(
-                    title: Text(
-                      "Sorry",
-                      style: TextStyle(color: CupertinoColors.systemRed),
-                    ),
-                    content: Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        " My Choice access opens on verysoon",
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ),
-                    actions: [
-                      CupertinoDialogAction(
-                        child: Text(
-                          "OK",
-                          style: TextStyle(color: CupertinoColors.systemRed),
-                        ),
-                        onPressed: () {
-                          Get.back();
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              },
-              child: Row(
-                children: [
-                  Container(
-                    height: 60,
-                    width: 60,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      color: Color(0xffE4ADCF),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 5, right: 5, top: 5),
-                      child: Image.asset(
-                        "assets/images/breakfast.png",
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Breakfast",
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                          fontSize: 16,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Image.asset(
-                            "assets/images/time.png",
-                            height: 18,
-                            width: 18,
-                          ),
-                          SizedBox(width: 6),
-                          Text(
-                            "8Am - 9Am",
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w400,
-                              color: Color(0xff425F2B),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  Spacer(),
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: Colors.black,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                        left: 20,
-                        right: 20,
-                        top: 8,
-                        bottom: 8,
-                      ),
-                      child: Text(
-                        "Oder Now",
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 10),
+            const SizedBox(height: 12),
             Container(
-              height: 2,
-              width: double.infinity,
-              color: Color(0xffE3E3E3),
-            ),
-            SizedBox(height: 10),
-            InkWell(
-              onTap: () {
-                showCupertinoDialog(
-                  context: Get.context!,
-                  builder: (context) => CupertinoAlertDialog(
-                    title: Text(
-                      "Sorry",
-                      style: TextStyle(color: CupertinoColors.systemRed),
-                    ),
-                    content: Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        " My Choice access opens on verysoon",
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ),
-                    actions: [
-                      CupertinoDialogAction(
-                        child: Text(
-                          "OK",
-                          style: TextStyle(color: CupertinoColors.systemRed),
-                        ),
-                        onPressed: () {
-                          Get.back();
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              },
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(10),
+              ),
               child: Row(
                 children: [
-                  Container(
-                    height: 60,
-                    width: 60,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      color: Color(0xffB1D8E6),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 5, right: 5, top: 5),
-                      child: Image.asset(
-                        "assets/images/lunch.png",
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "lunch",
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                          fontSize: 16,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 8),
-                      Row(
+                  const Icon(Icons.info_outline, size: 16, color: Colors.blue),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
                         children: [
-                          Image.asset(
-                            "assets/images/time.png",
-                            height: 18,
-                            width: 18,
-                          ),
-                          SizedBox(width: 6),
-                          Text(
-                            "12Pm - 2Pm",
+                          TextSpan(
+                            text: "Note:",
                             style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w400,
-                              color: Color(0xff425F2B),
-                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.blue.shade900,
+                              fontSize: 11,
+                            ),
+                          ),
+                          TextSpan(
+                            text:
+                                " This service is exclusively for Day Scholars.",
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w500,
+                              color: Colors.blue.shade800,
+                              fontSize: 11,
                             ),
                           ),
                         ],
-                      ),
-                    ],
-                  ),
-                  Spacer(),
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: Colors.black,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                        left: 20,
-                        right: 20,
-                        top: 8,
-                        bottom: 8,
-                      ),
-                      child: Text(
-                        "Oder Now",
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          fontSize: 12,
-                        ),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            SizedBox(height: 10),
-            Container(
-              height: 2,
-              width: double.infinity,
-              color: Color(0xffE3E3E3),
+            const SizedBox(height: 20),
+            _buildMealItem(
+              title: "Breakfast",
+              time: "8 AM - 9 AM",
+              imagePath: "assets/images/breakfast.png",
+              bgColor: const Color(0xffE4ADCF),
+              onTap: _showLockedDialog,
             ),
-            SizedBox(height: 10),
-            InkWell(
-              onTap: () {
-                showCupertinoDialog(
-                  context: Get.context!,
-                  builder: (context) => CupertinoAlertDialog(
-                    title: Text(
-                      "Sorry",
-                      style: TextStyle(color: CupertinoColors.systemRed),
-                    ),
-                    content: Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        " My Choice access opens on verysoon",
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ),
-                    actions: [
-                      CupertinoDialogAction(
-                        child: Text(
-                          "OK",
-                          style: TextStyle(color: CupertinoColors.systemRed),
-                        ),
-                        onPressed: () {
-                          Get.back();
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              },
-              child: Row(
-                children: [
-                  Container(
-                    height: 60,
-                    width: 60,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      color: Color(0xffFFCBA9),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 5, right: 5, top: 5),
-                      child: Image.asset(
-                        "assets/images/snakes.png",
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Snacks",
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                          fontSize: 16,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Image.asset(
-                            "assets/images/time.png",
-                            height: 18,
-                            width: 18,
-                          ),
-                          SizedBox(width: 6),
-                          Text(
-                            "5Pm - 6Pm",
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w400,
-                              color: Color(0xff425F2B),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  Spacer(),
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: Colors.black,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                        left: 20,
-                        right: 20,
-                        top: 8,
-                        bottom: 8,
-                      ),
-                      child: Text(
-                        "Oder Now",
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+            _buildDivider(),
+            _buildMealItem(
+              title: "Lunch",
+              time: "12 PM - 2 PM",
+              imagePath: "assets/images/lunch.png",
+              bgColor: const Color(0xffB1D8E6),
+              onTap: _showLockedDialog,
+            ),
+            _buildDivider(),
+            _buildMealItem(
+              title: "Snacks",
+              time: "5 PM - 6 PM",
+              imagePath: "assets/images/snakes.png",
+              bgColor: const Color(0xffFFCBA9),
+              onTap: _showLockedDialog,
+            ),
+            _buildDivider(),
+            _buildMealItem(
+              title: "Dinner",
+              time: "8 PM - 9 PM",
+              imagePath: "assets/images/dinner.png",
+              bgColor: const Color(0xffFCDC67),
+              onTap: _showLockedDialog,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMealItem({
+    required String title,
+    required String time,
+    required String imagePath,
+    required Color bgColor,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Row(
+          children: [
+            // ✅ INCREASED: Container size and reduced padding for larger image visual
+            Container(
+              height: 65,
+              width: 65,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                color: bgColor,
+              ),
+              child: Padding(
+                padding:
+                    const EdgeInsets.all(4), // Reduced padding = Larger image
+                child: Image.asset(imagePath, fit: BoxFit.contain),
               ),
             ),
-            SizedBox(height: 10),
-            Container(
-              height: 2,
-              width: double.infinity,
-              color: Color(0xffE3E3E3),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                    fontSize: 15,
+                  ),
+                ),
+                Text(
+                  time,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w400,
+                    color: Colors.grey.shade600,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
-            SizedBox(height: 10),
-            InkWell(
-              onTap: () {
-                showCupertinoDialog(
-                  context: Get.context!,
-                  builder: (context) => CupertinoAlertDialog(
-                    title: Text(
-                      "Sorry",
-                      style: TextStyle(color: CupertinoColors.systemRed),
-                    ),
-                    content: Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        " My Choice access opens on verysoon",
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ),
-                    actions: [
-                      CupertinoDialogAction(
-                        child: Text(
-                          "OK",
-                          style: TextStyle(color: CupertinoColors.systemRed),
-                        ),
-                        onPressed: () {
-                          Get.back();
-                        },
-                      ),
-                    ],
+            const Spacer(),
+            // ✅ INCREASED: Horizontal padding for a wider button
+            Container(
+              constraints:
+                  const BoxConstraints(minWidth: 90), // Ensures minimum width
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                color: Colors.black,
+              ),
+              child: Center(
+                child: Text(
+                  "Order Now",
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    fontSize: 12,
                   ),
-                );
-              },
-              child: Row(
-                children: [
-                  Container(
-                    height: 60,
-                    width: 60,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      color: Color(0xffFCDC67),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 5, right: 5, top: 5),
-                      child: Image.asset(
-                        "assets/images/dinner.png",
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Dinner",
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                          fontSize: 16,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Image.asset(
-                            "assets/images/time.png",
-                            height: 18,
-                            width: 18,
-                          ),
-                          SizedBox(width: 6),
-                          Text(
-                            "8Pm - 9Pm",
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w400,
-                              color: Color(0xff425F2B),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  Spacer(),
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: Colors.black,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                        left: 20,
-                        right: 20,
-                        top: 8,
-                        bottom: 8,
-                      ),
-                      child: Text(
-                        "Oder Now",
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildDivider() {
+    return Divider(color: Colors.grey.shade200, thickness: 1, height: 10);
   }
 }

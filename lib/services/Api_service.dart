@@ -1,35 +1,86 @@
+import 'package:chefhospitalityservices/Screens/auth/onbording_screen.dart';
 import 'package:chefhospitalityservices/api/api_endpoint.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:get_storage/get_storage.dart';
+import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class ApiService {
   static const String _baseUrl = ApiEndpoints.tokenBaseUrl;
   final box = GetStorage();
 
+  // Helper to get the current token from storage
   String? get token => box.read('token');
 
-  Future<Map<String, dynamic>> submitMealSkip(String date, String mealType) async {
-  final response = await http.post(
-    Uri.parse('${ApiEndpoints.tokenBaseUrl}/skip'),
-    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-    body: json.encode({'date': date, 'mealType': mealType}),
-  );
-  return json.decode(response.body);
-}
+  /// ✅ THE MAGIC FUNCTION: Checks for expired tokens globally.
+  /// If the Backend returns 401 (Unauthorized) or 403 (Forbidden),
+  /// it means the JWT is dead.
+  void _checkTokenExpiry(int statusCode) {
+    if (statusCode == 401 || statusCode == 403) {
+      // 1. Clear ALL sensitive data from the phone
+      box.remove('token');
+      box.remove('user_data');
 
-Future<Map<String, dynamic>> getMySkips() async {
-  final response = await http.get(
-    Uri.parse('${ApiEndpoints.tokenBaseUrl}/my-skips'),
-    headers: {'Authorization': 'Bearer $token'},
-  );
-  return json.decode(response.body);
-}
+      // 2. Force the user back to the Onboarding/Login screen
+      // We use offAll so they cannot click 'back' to enter the app
+      Get.offAll(() => const OnboardingScreen());
 
-  // 1. Get Meal Token History
+      // 3. Notify the student
+      Get.snackbar(
+        "Session Expired",
+        "Your session has expired. Please log in again.",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+      );
+    }
+  }
+
+  // --- API METHODS ---
+
+  Future<Map<String, dynamic>> submitMealSkip(
+      String date, String mealType) async {
+    if (token == null) return {'success': false, 'message': 'Auth missing'};
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiEndpoints.tokenBaseUrl}/skip'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token'
+        },
+        body: json.encode({'date': date, 'mealType': mealType}),
+      );
+      _checkTokenExpiry(response.statusCode);
+      return json.decode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': 'Connection error.'};
+    }
+  }
+
+  Future<Map<String, dynamic>> getMySkips({required int page}) async {
+    if (token == null) return {'success': false, 'message': 'Auth missing'};
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiEndpoints.tokenBaseUrl}/my-skips?page=$page'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      _checkTokenExpiry(response.statusCode);
+      return response.statusCode == 200
+          ? json.decode(response.body)
+          : {'success': false, 'message': 'Failed to load skip history.'};
+    } catch (e) {
+      return {'success': false, 'message': 'Connection error.'};
+    }
+  }
+
   Future<Map<String, dynamic>> getUserHistory(int page) async {
-    if (token == null) return {'success': false, 'message': 'User not authenticated.'};
-
+    if (token == null)
+      return {'success': false, 'message': 'User not authenticated.'};
     try {
       final response = await http.get(
         Uri.parse('${ApiEndpoints.tokenBaseUrl}/my-history?page=$page'),
@@ -38,16 +89,18 @@ Future<Map<String, dynamic>> getMySkips() async {
           'Authorization': 'Bearer $token',
         },
       );
-      return response.statusCode == 200 ? json.decode(response.body) : {'success': false, 'message': 'Failed to load history.'};
+      _checkTokenExpiry(response.statusCode);
+      return response.statusCode == 200
+          ? json.decode(response.body)
+          : {'success': false, 'message': 'Failed to load history.'};
     } catch (e) {
       return {'success': false, 'message': 'Connection error.'};
     }
   }
 
-  // 2. Generate New Token
   Future<Map<String, dynamic>> generateToken(String mealType) async {
-    if (token == null) return {'success': false, 'message': 'User not authenticated.'};
-
+    if (token == null)
+      return {'success': false, 'message': 'User not authenticated.'};
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/generate'),
@@ -57,16 +110,15 @@ Future<Map<String, dynamic>> getMySkips() async {
         },
         body: json.encode({'mealType': mealType}),
       );
+      _checkTokenExpiry(response.statusCode);
       return json.decode(response.body);
     } catch (e) {
       return {'success': false, 'message': 'Connection error.'};
     }
   }
 
-  // 3. ✅ FIXED: Get User Payment History (REMOVED DUPLICATES)
   Future<Map<String, dynamic>> getUserPaymentHistory() async {
     if (token == null) return {'success': false, 'message': 'Auth missing'};
-
     try {
       final response = await http.get(
         Uri.parse('${ApiEndpoints.authBaseUrl}/payment-history'),
@@ -75,21 +127,18 @@ Future<Map<String, dynamic>> getMySkips() async {
           'Authorization': 'Bearer $token',
         },
       );
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        return {'success': false, 'message': 'Failed to load payment history.'};
-      }
+      _checkTokenExpiry(response.statusCode);
+      return response.statusCode == 200
+          ? json.decode(response.body)
+          : {'success': false, 'message': 'Failed to load payment history.'};
     } catch (e) {
       return {'success': false, 'message': 'Connection error.'};
     }
   }
 
-  // 4. Verify Payment Success
-  Future<Map<String, dynamic>> verifyOnlinePayment(String paymentId, String orderId) async {
+  Future<Map<String, dynamic>> verifyOnlinePayment(
+      String paymentId, String orderId) async {
     if (token == null) return {'success': false, 'message': 'Auth missing'};
-
     try {
       final response = await http.post(
         Uri.parse('${ApiEndpoints.authBaseUrl}/payment-success'),
@@ -102,16 +151,16 @@ Future<Map<String, dynamic>> getMySkips() async {
           'orderId': orderId,
         }),
       );
+      _checkTokenExpiry(response.statusCode);
       return json.decode(response.body);
     } catch (e) {
       return {'success': false, 'message': 'Payment verification failed.'};
     }
   }
 
-  // 5. Admin Stats
   Future<Map<String, dynamic>> getTodayStats() async {
-    if (token == null) return {'success': false, 'message': 'User not authenticated.'};
-
+    if (token == null)
+      return {'success': false, 'message': 'User not authenticated.'};
     try {
       final response = await http.get(
         Uri.parse('$_baseUrl/stats/today'),
@@ -120,8 +169,9 @@ Future<Map<String, dynamic>> getMySkips() async {
           'Authorization': 'Bearer $token',
         },
       );
-      return response.statusCode == 200 
-          ? json.decode(response.body) 
+      _checkTokenExpiry(response.statusCode);
+      return response.statusCode == 200
+          ? json.decode(response.body)
           : {'breakfast': 0, 'lunch': 0, 'snacks': 0, 'dinner': 0};
     } catch (e) {
       return {'breakfast': 0, 'lunch': 0, 'snacks': 0, 'dinner': 0};

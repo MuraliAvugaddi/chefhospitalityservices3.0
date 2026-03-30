@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart'; // ✅ Web safe imports
 import 'package:chefhospitalityservices/Controllers/profile_controller.dart';
 import 'package:chefhospitalityservices/Screens/Payment_HistoryScreen.dart';
 import 'package:chefhospitalityservices/services/api_service.dart';
@@ -10,7 +10,7 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 class SubscriptionScreen extends StatefulWidget {
-  SubscriptionScreen({super.key});
+  const SubscriptionScreen({super.key});
 
   @override
   State<SubscriptionScreen> createState() => _SubscriptionScreenState();
@@ -18,7 +18,6 @@ class SubscriptionScreen extends StatefulWidget {
 
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
   final ProfileController controller = Get.find<ProfileController>();
-
   final ApiService _apiService = ApiService();
   final AudioPlayer _audioPlayer = AudioPlayer();
   late Razorpay _razorpay;
@@ -31,13 +30,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     super.initState();
     _loadBannerAd();
 
-    // Initialize Razorpay
     _razorpay = Razorpay();
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
 
-    // ✅ Play success sound if already active when opening
     if (controller.isSubscriptionActive) {
       _playSuccessSound();
     }
@@ -45,7 +42,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   void _playSuccessSound() async {
     try {
-      //await _audioPlayer.play(AssetSource('audio/success-221935.mp3'));
+      // await _audioPlayer.play(AssetSource('audio/success-221935.mp3'));
     } catch (e) {
       debugPrint("Error playing sound: $e");
     }
@@ -59,7 +56,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     super.dispose();
   }
 
-  // --- 💳 RAZORPAY HANDLERS ---
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
     Get.dialog(
         const Center(
@@ -73,7 +69,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
     if (result['success'] == true) {
       _playSuccessSound();
-      await controller.fetchUserProfile(); // Refresh data
+      await controller.fetchUserProfile();
       Get.snackbar("Success", "Access granted until month end!",
           backgroundColor: Colors.green, colorText: Colors.white);
     } else {
@@ -90,8 +86,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   void _openCheckout() {
     var options = {
-      'key': 'YOUR_RAZORPAY_KEY', // Replace with your real key
-      'amount': 380000, // ₹3800.00
+      'key': 'YOUR_RAZORPAY_KEY',
+      'amount': 380000,
       'name': 'Chef Hospitality',
       'description': 'Monthly Mess Subscription',
       'prefill': {
@@ -102,10 +98,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     _razorpay.open(options);
   }
 
-  // --- 📢 AD LOGIC ---
   void _loadBannerAd() {
+    // ✅ Completely skip ad loading if running on the Web
+    if (kIsWeb) return;
+
     _bannerAd = BannerAd(
-      adUnitId: Platform.isAndroid
+      adUnitId: defaultTargetPlatform == TargetPlatform.android
           ? 'ca-app-pub-3940256099942544/6300978111'
           : 'ca-app-pub-3940256099942544/2934735716',
       request: const AdRequest(),
@@ -122,7 +120,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        // lib/Screens/home_screen.dart
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 14),
@@ -132,17 +129,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 height: 40,
                 width: 40,
                 decoration: BoxDecoration(
-                  color: const Color(0xffFADD73), // Deep food green
+                  color: const Color(0xffFADD73),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Color.fromARGB(255, 0, 0, 0),
-                  ),
+                  border: Border.all(color: const Color.fromARGB(255, 0, 0, 0)),
                 ),
-                child: const Icon(
-                  Icons.receipt_long,
-                  color: Color.fromARGB(255, 0, 0, 0),
-                  size: 22,
-                ),
+                child: const Icon(Icons.receipt_long,
+                    color: Color.fromARGB(255, 0, 0, 0), size: 22),
               ),
             ),
           ),
@@ -178,42 +170,41 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     Text("(Subscription Plan)",
                         style: GoogleFonts.poppins(
                             fontWeight: FontWeight.w500, fontSize: 20)),
-
-                    // ✅ Dynamic UI Switch
                     isActive ? _buildNoDueUI() : _buildPaymentUI(),
                   ],
                 ),
               ),
             ),
 
-            // AD CONTAINER
-            Container(
-              height: 50,
-              color: _isBannerAdLoaded ? Colors.transparent : Colors.grey[100],
-              child: _isBannerAdLoaded
-                  ? AdWidget(ad: _bannerAd!)
-                  : const Center(
-                      child: Text("Loading Ad...",
-                          style: TextStyle(fontSize: 10))),
-            ),
+            // ✅ Hide Ad Container on Web entirely
+            if (!kIsWeb)
+              Container(
+                height: 50,
+                color:
+                    _isBannerAdLoaded ? Colors.transparent : Colors.grey[100],
+                child: _isBannerAdLoaded
+                    ? AdWidget(ad: _bannerAd!)
+                    : const Center(
+                        child: Text("Loading Ad...",
+                            style: TextStyle(fontSize: 10))),
+              ),
           ],
         );
       }),
     );
   }
 
-  // --- 🟢 UI for Paid Students ---
+  // ✅ Updated responsive UI for Paid Students
   Widget _buildNoDueUI() {
     return Column(
       children: [
         const SizedBox(height: 55),
         Container(
-          width: 350,
+          width: double
+              .infinity, // ✅ Makes it stretch across any screen size perfectly
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            border:
-                Border.all(color: Colors.greenAccent.withValues(alpha: 0.8)),
-            // The card has a subtle mint-to-white gradient
+            border: Border.all(color: Colors.greenAccent.withOpacity(0.8)),
             gradient: const LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
@@ -230,8 +221,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             ],
           ),
           child: Stack(
+            alignment: Alignment
+                .center, // ✅ Forces all inner content to perfectly center
             children: [
-              // The "X" Close Button
               Positioned(
                 right: 0,
                 top: 0,
@@ -240,9 +232,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               ),
               Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const SizedBox(height: 10),
-                  // The 3D Green Button
                   Container(
                     height: 100,
                     width: 100,
@@ -254,13 +246,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         colors: [Color(0xFF16E377), Color(0xFF00AD46)],
                       ),
                       boxShadow: [
-                        // Soft outer glow
                         BoxShadow(
                           color: const Color(0xFF00C853).withOpacity(0.2),
                           blurRadius: 20,
                           spreadRadius: 5,
                         ),
-                        // Darker bottom shadow for 3D depth
                         BoxShadow(
                           color: Colors.black.withOpacity(0.15),
                           blurRadius: 10,
@@ -268,14 +258,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.check_rounded,
-                      color: Colors.white,
-                      size: 65,
-                    ),
+                    child: const Icon(Icons.check_rounded,
+                        color: Colors.white, size: 65),
                   ),
                   const SizedBox(height: 35),
-                  // Title
                   const Text(
                     "You Have No Dues This Month🎉",
                     textAlign: TextAlign.center,
@@ -287,7 +273,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  // Description
                   Text(
                     "Your access is active. Enjoy Your delicious meals!",
                     textAlign: TextAlign.center,
@@ -308,7 +293,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
   }
 
-  // --- 🔴 UI for Unpaid Students ---
   Widget _buildPaymentUI() {
     return Column(
       children: [
