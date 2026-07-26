@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
-import 'package:flutter/foundation.dart'; // ✅ FIXED: Replaced dart:io with foundation
+import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class ScannerScreen extends StatefulWidget {
@@ -27,8 +27,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
   BannerAd? _bottomBannerAd;
   bool _isBottomBannerLoaded = false;
 
-  final String _androidAdUnitId = 'ca-app-pub-3940256099942544/6300978111';
-  final String _iosAdUnitId = 'ca-app-pub-3940256099942544/2934735716';
+  // ✅ Your production Ad Unit IDs for Top & Bottom Scanner Banners
+  final String _topBannerAdUnitId = 'ca-app-pub-6236176751859838/9897005033';
+  final String _bottomBannerAdUnitId = 'ca-app-pub-6236176751859838/5734398744';
 
   // --- TIME VALIDATION LOGIC ---
   bool isTimeValidForMeal() {
@@ -62,15 +63,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
     _loadBottomBannerAd();
   }
 
-  // --- ✅ FIXED: Ad loading functions made web-safe ---
+  // --- Ad loading functions ---
   void _loadTopBannerAd() {
-    if (kIsWeb) return; // Skip ad loading on Web
+    if (kIsWeb) return;
 
-    String adUnitId = defaultTargetPlatform == TargetPlatform.android
-        ? _androidAdUnitId
-        : _iosAdUnitId;
     _topBannerAd = BannerAd(
-      adUnitId: adUnitId,
+      adUnitId: _topBannerAdUnitId,
       request: const AdRequest(),
       size: AdSize.banner,
       listener: BannerAdListener(
@@ -80,7 +78,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
           });
         },
         onAdFailedToLoad: (ad, err) {
-          debugPrint('Top BannerAd failed to load: $err');
+          debugPrint('❌ Top BannerAd failed to load: $err');
           ad.dispose();
         },
       ),
@@ -88,13 +86,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
   }
 
   void _loadBottomBannerAd() {
-    if (kIsWeb) return; // Skip ad loading on Web
+    if (kIsWeb) return;
 
-    String adUnitId = defaultTargetPlatform == TargetPlatform.android
-        ? _androidAdUnitId
-        : _iosAdUnitId;
     _bottomBannerAd = BannerAd(
-      adUnitId: adUnitId,
+      adUnitId: _bottomBannerAdUnitId,
       request: const AdRequest(),
       size: AdSize.banner,
       listener: BannerAdListener(
@@ -104,7 +99,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
           });
         },
         onAdFailedToLoad: (ad, err) {
-          debugPrint('Bottom BannerAd failed to load: $err');
+          debugPrint('❌ Bottom BannerAd failed to load: $err');
           ad.dispose();
         },
       ),
@@ -115,7 +110,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
   void reassemble() {
     super.reassemble();
     if (controller != null) {
-      // ✅ FIXED: Prevented crash during hot reload on web
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
         controller!.pauseCamera();
       }
@@ -181,13 +175,20 @@ class _ScannerScreenState extends State<ScannerScreen> {
     }
   }
 
+  // ✅ Styled Container to prevent collapse when ad is loading/failed
   Widget _buildAdContainer(BannerAd? ad, bool isLoaded) {
     return Container(
       alignment: Alignment.center,
       height: 50.0,
       width: double.infinity,
-      color: Colors.transparent,
-      child: isLoaded ? AdWidget(ad: ad!) : Container(),
+      color: Colors.black, // Matching scanner background
+      child: isLoaded && ad != null
+          ? SizedBox(
+              width: ad.size.width.toDouble(),
+              height: ad.size.height.toDouble(),
+              child: AdWidget(ad: ad),
+            )
+          : const SizedBox.shrink(), // Keeps UI clean if ad hasn't loaded yet
     );
   }
 
@@ -209,9 +210,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
         ),
         body: Column(
           children: [
-            // ✅ Hide Ad container completely on web
             if (!kIsWeb) _buildAdContainer(_topBannerAd, _isTopBannerLoaded),
-
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
@@ -239,7 +238,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
                 ),
               ),
             ),
-
             if (!kIsWeb)
               _buildAdContainer(_bottomBannerAd, _isBottomBannerLoaded),
           ],
@@ -251,11 +249,14 @@ class _ScannerScreenState extends State<ScannerScreen> {
       backgroundColor: Colors.black,
       body: Column(
         children: <Widget>[
+          // ✅ Upside (Top) Banner Ad
           if (!kIsWeb)
             SafeArea(
               bottom: false,
               child: _buildAdContainer(_topBannerAd, _isTopBannerLoaded),
             ),
+
+          // QR Scanner View Area
           Expanded(
             child: Stack(
               alignment: Alignment.center,
@@ -288,8 +289,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.black
-                          .withOpacity(0.5), // ✅ Fixed opacity warning
+                      color: Colors.black.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Text(
@@ -301,6 +301,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
               ],
             ),
           ),
+
+          // ✅ Downside (Bottom) Banner Ad wrapped nicely inside SafeArea
           if (!kIsWeb)
             SafeArea(
               top: false,

@@ -5,18 +5,18 @@ import '../services/api_service.dart';
 
 class MealSkipController extends GetxController {
   final ApiService _apiService = ApiService();
-
-  // Scroll Controller for Infinite Scroll
   final ScrollController scrollController = ScrollController();
 
   var historyList = <dynamic>[].obs;
   var isLoading = false.obs;
-  var isMoreLoading = false.obs; // Loader for bottom pagination
+  var isMoreLoading = false.obs; 
 
   var selectedDate = DateTime.now().add(const Duration(days: 1)).obs;
   var selectedMeal = "Full Day".obs;
 
-  // Pagination Variables
+  // ✅ Added reactive month filter variable (Defaults to current month/year format matching backend)
+  var selectedHistoryMonth = DateFormat('MMMM yyyy').format(DateTime.now()).obs;
+
   var currentPage = 1.obs;
   var hasMoreData = true.obs;
 
@@ -25,7 +25,6 @@ class MealSkipController extends GetxController {
     super.onInit();
     fetchInitialSkips();
 
-    // Listen to scroll events
     scrollController.addListener(() {
       if (scrollController.position.pixels >=
           scrollController.position.maxScrollExtent - 200) {
@@ -46,6 +45,11 @@ class MealSkipController extends GetxController {
 
   int get totalHistorySkips => historyList.length;
 
+  void changeHistoryMonth(String newMonth) {
+    selectedHistoryMonth.value = newMonth;
+    fetchInitialSkips();
+  }
+
   // --- 1. INITIAL FETCH ---
   Future<void> fetchInitialSkips() async {
     try {
@@ -53,12 +57,14 @@ class MealSkipController extends GetxController {
       currentPage.value = 1;
       hasMoreData.value = true;
 
-      final Map<String, dynamic> res = await _apiService.getMySkips(page: 1);
+      final Map<String, dynamic> res = await _apiService.getMySkips(
+        page: 1, 
+        month: selectedHistoryMonth.value,
+      );
 
       if (res['success'] == true && res['skips'] != null) {
         List data = res['skips'];
         historyList.assignAll(data);
-        // If back-end sends less than 15, assume no more pages
         if (data.length < 15) hasMoreData.value = false;
       }
     } catch (e) {
@@ -75,7 +81,10 @@ class MealSkipController extends GetxController {
     try {
       isMoreLoading(true);
       int nextPage = currentPage.value + 1;
-      final Map<String, dynamic> res = await _apiService.getMySkips(page: nextPage);
+      final Map<String, dynamic> res = await _apiService.getMySkips(
+        page: nextPage, 
+        month: selectedHistoryMonth.value,
+      );
 
       if (res['success'] == true && res['skips'] != null) {
         List newItems = res['skips'];
@@ -104,7 +113,7 @@ class MealSkipController extends GetxController {
       if (res['success'] == true) {
         Get.snackbar("Success", res['message'] ?? "Meal skipped",
             backgroundColor: Colors.green, colorText: Colors.white);
-        fetchInitialSkips(); // Refresh list after new skip
+        fetchInitialSkips(); 
       } else {
         Get.snackbar("Denied", res['message'] ?? "Failed",
             backgroundColor: Colors.red, colorText: Colors.white);

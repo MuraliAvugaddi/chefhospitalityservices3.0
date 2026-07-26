@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart'; // ✅ Web safe imports
+import 'package:flutter/foundation.dart';
 import 'package:chefhospitalityservices/Controllers/profile_controller.dart';
 import 'package:chefhospitalityservices/Screens/Payment_HistoryScreen.dart';
 import 'package:chefhospitalityservices/services/api_service.dart';
@@ -9,6 +9,46 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:audioplayers/audioplayers.dart';
 
+// ============================================================
+// CHEF BRAND COLORS
+// ============================================================
+
+const Color primaryColor = Color(0xFFFADD73);
+const Color primaryDark = Color(0xFFD5A514);
+const Color primaryLight = Color(0xFFFFF8DC);
+
+const Color secondaryColor = Color(0xFFC6E4AD);
+const Color secondaryDark = Color(0xFF669447);
+const Color secondaryLight = Color(0xFFF1F8EB);
+
+const Color darkTextColor = Color(0xFF252A27);
+const Color lightTextColor = Color(0xFF7C837F);
+
+const Color backgroundColor = Color(0xFFFAFAF8);
+const Color cardColor = Colors.white;
+
+// ============================================================
+// SUBSCRIPTION PRICE
+// ============================================================
+
+// Base monthly fee
+const double basePrice = 4000;
+
+// GST
+const double gstPercentage = 2;
+const double gstAmount = 80;
+
+// Final amount
+const double totalPrice = 4080;
+
+// Razorpay accepts amount in paise.
+// ₹4,080 = 408000 paise.
+const int razorpayAmount = 408000;
+
+// ============================================================
+// SUBSCRIPTION SCREEN
+// ============================================================
+
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
 
@@ -18,175 +58,432 @@ class SubscriptionScreen extends StatefulWidget {
 
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
   final ProfileController controller = Get.find<ProfileController>();
+
   final ApiService _apiService = ApiService();
+
   final AudioPlayer _audioPlayer = AudioPlayer();
+
   late Razorpay _razorpay;
 
   BannerAd? _bannerAd;
+
   bool _isBannerAdLoaded = false;
+
+  // ============================================================
+  // ADMOB
+  // ============================================================
+
+  final String _androidBannerAdUnitId =
+      'ca-app-pub-6236176751859838/9488589732';
+
+  final String _iosBannerAdUnitId = 'ca-app-pub-3940256099942544/2934735716';
+
+  String get _bannerAdUnitId {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return _androidBannerAdUnitId;
+    }
+
+    return _iosBannerAdUnitId;
+  }
+
+  // ============================================================
+  // INIT STATE
+  // ============================================================
 
   @override
   void initState() {
     super.initState();
+
     _loadBannerAd();
 
     _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+
+    _razorpay.on(
+      Razorpay.EVENT_PAYMENT_SUCCESS,
+      _handlePaymentSuccess,
+    );
+
+    _razorpay.on(
+      Razorpay.EVENT_PAYMENT_ERROR,
+      _handlePaymentError,
+    );
+
+    _razorpay.on(
+      Razorpay.EVENT_EXTERNAL_WALLET,
+      _handleExternalWallet,
+    );
 
     if (controller.isSubscriptionActive) {
       _playSuccessSound();
     }
   }
 
+  // ============================================================
+  // SUCCESS SOUND
+  // ============================================================
+
   void _playSuccessSound() async {
     try {
-      // await _audioPlayer.play(AssetSource('audio/success-221935.mp3'));
+      // If you want success sound later:
+      //
+      // await _audioPlayer.play(
+      //   AssetSource('audio/success-221935.mp3'),
+      // );
     } catch (e) {
-      debugPrint("Error playing sound: $e");
+      debugPrint(
+        "Error playing success sound: $e",
+      );
     }
   }
+
+  // ============================================================
+  // DISPOSE
+  // ============================================================
 
   @override
   void dispose() {
     _bannerAd?.dispose();
+
     _razorpay.clear();
+
     _audioPlayer.dispose();
+
     super.dispose();
   }
 
-  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+  // ============================================================
+  // PAYMENT SUCCESS
+  // ============================================================
+
+  void _handlePaymentSuccess(
+    PaymentSuccessResponse response,
+  ) async {
     Get.dialog(
-        const Center(
-            child: CircularProgressIndicator(color: Color(0xffFFC800))),
-        barrierDismissible: false);
+      const Center(
+        child: CircularProgressIndicator(
+          color: primaryDark,
+        ),
+      ),
+      barrierDismissible: false,
+    );
 
-    final result = await _apiService.verifyOnlinePayment(response.paymentId!,
-        response.orderId ?? "online_${DateTime.now().millisecondsSinceEpoch}");
+    try {
+      final result = await _apiService.verifyOnlinePayment(
+        response.paymentId!,
+        response.orderId ?? "online_${DateTime.now().millisecondsSinceEpoch}",
+      );
 
-    Get.back(); // Close loading
+      if (Get.isDialogOpen == true) {
+        Get.back();
+      }
 
-    if (result['success'] == true) {
-      _playSuccessSound();
-      await controller.fetchUserProfile();
-      Get.snackbar("Success", "Access granted until month end!",
-          backgroundColor: Colors.green, colorText: Colors.white);
-    } else {
-      Get.snackbar("Error", "Account update failed. Please contact Admin.");
+      if (result['success'] == true) {
+        _playSuccessSound();
+
+        await controller.fetchUserProfile();
+
+        Get.snackbar(
+          "Payment Successful",
+          "Your mess subscription is now active.",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: secondaryDark,
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 16,
+          icon: const Icon(
+            Icons.check_circle_rounded,
+            color: Colors.white,
+          ),
+        );
+      } else {
+        Get.snackbar(
+          "Account Update Failed",
+          "Payment was successful, but we could not update your subscription. Please contact the administrator.",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.shade500,
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 16,
+        );
+      }
+    } catch (e) {
+      if (Get.isDialogOpen == true) {
+        Get.back();
+      }
+
+      Get.snackbar(
+        "Verification Failed",
+        "We could not verify your payment. Please contact the administrator.",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade500,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 16,
+      );
     }
   }
 
-  void _handlePaymentError(PaymentFailureResponse response) {
-    Get.snackbar("Payment Failed", response.message ?? "Transaction Cancelled",
-        backgroundColor: Colors.red, colorText: Colors.white);
+  // ============================================================
+  // PAYMENT ERROR
+  // ============================================================
+
+  void _handlePaymentError(
+    PaymentFailureResponse response,
+  ) {
+    Get.snackbar(
+      "Payment Failed",
+      response.message ?? "The transaction was cancelled. Please try again.",
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.red.shade500,
+      colorText: Colors.white,
+      margin: const EdgeInsets.all(16),
+      borderRadius: 16,
+      icon: const Icon(
+        Icons.error_outline_rounded,
+        color: Colors.white,
+      ),
+    );
   }
 
-  void _handleExternalWallet(ExternalWalletResponse response) {}
+  // ============================================================
+  // EXTERNAL WALLET
+  // ============================================================
+
+  void _handleExternalWallet(
+    ExternalWalletResponse response,
+  ) {
+    debugPrint(
+      "External wallet selected: ${response.walletName}",
+    );
+  }
+
+  // ============================================================
+  // OPEN RAZORPAY
+  // ============================================================
 
   void _openCheckout() {
     var options = {
+      // IMPORTANT:
+      // Keep your existing Razorpay key here.
       'key': 'YOUR_RAZORPAY_KEY',
-      'amount': 380000,
+
+      // ₹4,080 = 408000 paise
+      'amount': razorpayAmount,
+
       'name': 'Chef Hospitality',
-      'description': 'Monthly Mess Subscription',
+
+      'description': 'Monthly Mess Subscription - ₹4,000 + 2% GST',
+
       'prefill': {
         'contact': controller.user.value.phonenumber,
-        'email': controller.user.value.email
+        'email': controller.user.value.email,
+      },
+
+      'theme': {
+        'color': '#FADD73',
       },
     };
-    _razorpay.open(options);
+
+    try {
+      _razorpay.open(options);
+    } catch (e) {
+      debugPrint(
+        "Razorpay error: $e",
+      );
+
+      Get.snackbar(
+        "Payment Error",
+        "Unable to open payment gateway. Please try again.",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade500,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 16,
+      );
+    }
   }
 
+  // ============================================================
+  // LOAD BANNER AD
+  // ============================================================
+
   void _loadBannerAd() {
-    // ✅ Completely skip ad loading if running on the Web
-    if (kIsWeb) return;
+    if (kIsWeb) {
+      return;
+    }
 
     _bannerAd = BannerAd(
-      adUnitId: defaultTargetPlatform == TargetPlatform.android
-          ? 'ca-app-pub-3940256099942544/6300978111'
-          : 'ca-app-pub-3940256099942544/2934735716',
+      adUnitId: _bannerAdUnitId,
       request: const AdRequest(),
       size: AdSize.banner,
       listener: BannerAdListener(
-        onAdLoaded: (ad) => setState(() => _isBannerAdLoaded = true),
-        onAdFailedToLoad: (ad, err) => ad.dispose(),
+        onAdLoaded: (ad) {
+          if (mounted) {
+            setState(() {
+              _isBannerAdLoaded = true;
+            });
+          }
+        },
+        onAdFailedToLoad: (ad, error) {
+          debugPrint(
+            'Subscription Banner Ad failed: $error',
+          );
+
+          ad.dispose();
+        },
       ),
     )..load();
   }
 
+  // ============================================================
+  // BUILD
+  // ============================================================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: backgroundColor,
+
+      // ========================================================
+      // APP BAR
+      // ========================================================
+
       appBar: AppBar(
+        toolbarHeight: 68,
+        backgroundColor: backgroundColor,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        leadingWidth: 68,
+        leading: Padding(
+          padding: const EdgeInsets.only(
+            left: 16,
+            top: 7,
+            bottom: 7,
+          ),
+          child: Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () => Get.back(),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: darkTextColor,
+                size: 18,
+              ),
+            ),
+          ),
+        ),
+        title: Text(
+          "Subscription",
+          style: GoogleFonts.poppins(
+            color: darkTextColor,
+            fontSize: 19,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 14),
-            child: GestureDetector(
-              onTap: () => Get.to(() => const PaymentHistoryScreen()),
-              child: Container(
-                height: 40,
-                width: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xffFADD73),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color.fromARGB(255, 0, 0, 0)),
+            padding: const EdgeInsets.only(
+              right: 16,
+              top: 7,
+              bottom: 7,
+            ),
+            child: Material(
+              color: primaryLight,
+              borderRadius: BorderRadius.circular(14),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () {
+                  Get.to(
+                    () => const PaymentHistoryScreen(),
+                  );
+                },
+                child: const SizedBox(
+                  height: 46,
+                  width: 46,
+                  child: Icon(
+                    Icons.receipt_long_rounded,
+                    color: primaryDark,
+                    size: 21,
+                  ),
                 ),
-                child: const Icon(Icons.receipt_long,
-                    color: Color.fromARGB(255, 0, 0, 0), size: 22),
               ),
             ),
           ),
         ],
-        title: Obx(() => Text('Hello ${controller.user.value.name}',
-            style: GoogleFonts.roboto(
-                fontWeight: FontWeight.w600,
-                fontSize: 22,
-                color: Colors.black))),
-        backgroundColor: const Color(0xffFADD73),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
-          onPressed: () => Get.back(),
-        ),
       ),
+
+      // ========================================================
+      // BODY
+      // ========================================================
+
       body: Obx(() {
-        bool isActive = controller.isSubscriptionActive;
+        final bool isActive = controller.isSubscriptionActive;
 
         return Column(
           children: [
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Ghar ka khana",
-                        style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xffFFC800),
-                            fontSize: 30)),
-                    Text("(Subscription Plan)",
-                        style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w500, fontSize: 20)),
-                    isActive ? _buildNoDueUI() : _buildPaymentUI(),
-                  ],
+              child: RefreshIndicator(
+                color: primaryDark,
+                backgroundColor: Colors.white,
+                onRefresh: () => controller.fetchUserProfile(),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(
+                    16,
+                    6,
+                    16,
+                    24,
+                  ),
+                  child: Column(
+                    children: [
+                      // ========================================
+                      // SMALL HEADER
+                      // ========================================
+
+                      _buildHeader(isActive),
+
+                      const SizedBox(height: 16),
+
+                      // ========================================
+                      // PAYMENT / ACTIVE CARD
+                      // ========================================
+
+                      if (isActive) _buildNoDueUI() else _buildPaymentUI(),
+
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
               ),
             ),
 
-            // ✅ Hide Ad Container on Web entirely
+            // ================================================
+            // ADMOB BANNER
+            // ================================================
+
             if (!kIsWeb)
               Container(
                 height: 50,
-                color:
-                    _isBannerAdLoaded ? Colors.transparent : Colors.grey[100],
-                child: _isBannerAdLoaded
-                    ? AdWidget(ad: _bannerAd!)
-                    : const Center(
-                        child: Text("Loading Ad...",
-                            style: TextStyle(fontSize: 10))),
+                width: double.infinity,
+                color: _isBannerAdLoaded
+                    ? Colors.transparent
+                    : Colors.grey.shade50,
+                child: _isBannerAdLoaded && _bannerAd != null
+                    ? AdWidget(
+                        ad: _bannerAd!,
+                      )
+                    : Center(
+                        child: Text(
+                          "Loading Ad...",
+                          style: GoogleFonts.poppins(
+                            color: lightTextColor,
+                            fontSize: 9,
+                          ),
+                        ),
+                      ),
               ),
           ],
         );
@@ -194,163 +491,535 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
   }
 
-  // ✅ Updated responsive UI for Paid Students
-  Widget _buildNoDueUI() {
-    return Column(
-      children: [
-        const SizedBox(height: 55),
-        Container(
-          width: double
-              .infinity, // ✅ Makes it stretch across any screen size perfectly
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.greenAccent.withOpacity(0.8)),
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFFF1F9F3), Colors.white],
-              stops: [0.0, 0.4],
-            ),
-            borderRadius: BorderRadius.circular(32),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 30,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Stack(
-            alignment: Alignment
-                .center, // ✅ Forces all inner content to perfectly center
-            children: [
-              Positioned(
-                right: 0,
-                top: 0,
-                child: Icon(Icons.close,
-                    color: Colors.grey.withOpacity(0.9), size: 20),
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 10),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xFF00C853),
-                      gradient: const RadialGradient(
-                        center: Alignment(-0.3, -0.4),
-                        colors: [Color(0xFF16E377), Color(0xFF00AD46)],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF00C853).withOpacity(0.2),
-                          blurRadius: 20,
-                          spreadRadius: 5,
-                        ),
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 10,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(Icons.check_rounded,
-                        color: Colors.white, size: 65),
-                  ),
-                  const SizedBox(height: 35),
-                  const Text(
-                    "You Have No Dues This Month🎉",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF263238),
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    "Your access is active. Enjoy Your delicious meals!",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 15,
-                      height: 1.5,
-                      color: Colors.black.withOpacity(0.5),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-              ),
-            ],
-          ),
+  // ============================================================
+  // SMALL MODERN HEADER
+  // ============================================================
+
+  Widget _buildHeader(bool isActive) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 18,
+        vertical: 15,
+      ),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFFADD73),
+            Color(0xFFFFE99A),
+            Color(0xFFFFF3C4),
+          ],
         ),
-      ],
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withOpacity(0.20),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // ICON
+          Container(
+            height: 48,
+            width: 48,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.65),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: const Icon(
+              Icons.restaurant_menu_rounded,
+              color: darkTextColor,
+              size: 24,
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
+          // TITLE
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Monthly Mess Plan",
+                  style: GoogleFonts.poppins(
+                    color: darkTextColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  isActive
+                      ? "Your subscription is active"
+                      : "Ghar ka khana, every day",
+                  style: GoogleFonts.poppins(
+                    color: darkTextColor.withOpacity(0.60),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // STATUS
+          Container(
+            height: 40,
+            width: 40,
+            decoration: BoxDecoration(
+              color: isActive ? secondaryLight : Colors.white.withOpacity(0.65),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              isActive
+                  ? Icons.verified_rounded
+                  : Icons.workspace_premium_rounded,
+              color: isActive ? secondaryDark : primaryDark,
+              size: 21,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
+  // ============================================================
+  // PAYMENT UI
+  // ============================================================
+
   Widget _buildPaymentUI() {
-    return Column(
-      children: [
-        Center(child: Image.asset("assets/images/pay1immage.png", height: 250)),
-        const SizedBox(height: 20),
-        InkWell(
-          onTap: _openCheckout,
-          child: Container(
-            height: 80,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xffFFDB1E), width: 3),
-              borderRadius: BorderRadius.circular(20),
-              gradient: const LinearGradient(colors: [
-                Color(0xffFBE15A),
-                Color(0xffFDEEB0),
-                Color(0xffFBE15A)
-              ]),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        18,
+        20,
+        18,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color(0xFFF0F0EA),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // ==================================================
+          // PLAN TITLE
+          // ==================================================
+
+          Row(
+            children: [
+              Container(
+                height: 44,
+                width: 44,
+                decoration: BoxDecoration(
+                  color: primaryLight,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.restaurant_rounded,
+                  color: primaryDark,
+                  size: 21,
+                ),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Monthly Subscription",
+                      style: GoogleFonts.poppins(
+                        color: darkTextColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      "Complete monthly meal access",
+                      style: GoogleFonts.poppins(
+                        color: lightTextColor,
+                        fontSize: 9.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 9,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: secondaryLight,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  "MONTHLY",
+                  style: GoogleFonts.poppins(
+                    color: secondaryDark,
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 18),
+
+          // ==================================================
+          // PRICE IN CENTER
+          // ==================================================
+
+          Text(
+            "Monthly Fee",
+            style: GoogleFonts.poppins(
+              color: lightTextColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
             ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+          ),
+
+          const SizedBox(height: 1),
+
+          Text(
+            "₹4,000",
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              color: darkTextColor,
+              fontSize: 38,
+              height: 1.2,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -1.3,
+            ),
+          ),
+
+          const SizedBox(height: 5),
+
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 11,
+              vertical: 5,
+            ),
+            decoration: BoxDecoration(
+              color: primaryLight,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              "+ 2% GST",
+              style: GoogleFonts.poppins(
+                color: primaryDark,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          // ==================================================
+          // PRICE BREAKDOWN
+          // ==================================================
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 15,
+              vertical: 13,
+            ),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFAFAF8),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                _priceRow(
+                  "Mess subscription",
+                  "₹4,000",
+                ),
+                const SizedBox(height: 8),
+                _priceRow(
+                  "GST (2%)",
+                  "₹80",
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(
+                    vertical: 10,
+                  ),
+                  child: Divider(
+                    height: 1,
+                    color: Color(0xFFEAEAE5),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Text(
+                      "Total Payable",
+                      style: GoogleFonts.poppins(
+                        color: darkTextColor,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      "₹4,080",
+                      style: GoogleFonts.poppins(
+                        color: darkTextColor,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // ==================================================
+          // PAY BUTTON
+          // ==================================================
+
+          SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: ElevatedButton(
+              onPressed: _openCheckout,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: darkTextColor,
+                elevation: 0,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircleAvatar(
-                      backgroundColor: const Color(0xffFEEFB8),
-                      child:
-                          Image.asset("assets/images/money.png", height: 25)),
-                  const SizedBox(width: 16),
-                  Text.rich(TextSpan(children: [
-                    TextSpan(
-                        text: "₹3800",
-                        style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600, fontSize: 22)),
-                    TextSpan(
-                        text: "/Month.",
-                        style: GoogleFonts.poppins(
-                            fontSize: 12, color: const Color(0xff495E63))),
-                  ])),
-                  const Spacer(),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 25, vertical: 8),
-                    decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(8)),
-                    child: const Text("Pay",
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold)),
-                  )
+                  const Icon(
+                    Icons.lock_outline_rounded,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Pay ₹4,080",
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 18,
+                  ),
                 ],
               ),
             ),
           ),
+
+          const SizedBox(height: 11),
+
+          // ==================================================
+          // SECURE PAYMENT
+          // ==================================================
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.verified_user_outlined,
+                color: secondaryDark,
+                size: 14,
+              ),
+              const SizedBox(width: 5),
+              Text(
+                "Secure online payment",
+                style: GoogleFonts.poppins(
+                  color: lightTextColor,
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // ACTIVE SUBSCRIPTION UI
+  // ============================================================
+
+  Widget _buildNoDueUI() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        22,
+        28,
+        22,
+        26,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: secondaryColor.withOpacity(0.60),
         ),
-        const SizedBox(height: 15),
-        Text("Note: Unlock QR Scanner access instantly after payment.",
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.035),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // CHECK ICON
+          Container(
+            height: 88,
+            width: 88,
+            decoration: BoxDecoration(
+              color: secondaryLight,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: secondaryColor,
+                width: 4,
+              ),
+            ),
+            child: const Icon(
+              Icons.check_rounded,
+              color: secondaryDark,
+              size: 45,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          Text(
+            "You're all set! 🎉",
             textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+            style: GoogleFonts.poppins(
+              color: darkTextColor,
+              fontSize: 21,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.4,
+            ),
+          ),
+
+          const SizedBox(height: 7),
+
+          Text(
+            "No dues this month",
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              color: secondaryDark,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+
+          const SizedBox(height: 7),
+
+          Text(
+            "Your meal subscription is active. You can generate your meal tokens normally.",
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              color: lightTextColor,
+              fontSize: 11,
+              height: 1.5,
+            ),
+          ),
+
+          const SizedBox(height: 22),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: secondaryLight,
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.verified_user_outlined,
+                  color: secondaryDark,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    "Meal token access enabled",
+                    style: GoogleFonts.poppins(
+                      color: secondaryDark,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: secondaryDark,
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // PRICE ROW
+  // ============================================================
+
+  Widget _priceRow(
+    String title,
+    String price,
+  ) {
+    return Row(
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            color: lightTextColor,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          price,
+          style: GoogleFonts.poppins(
+            color: darkTextColor,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ],
     );
   }

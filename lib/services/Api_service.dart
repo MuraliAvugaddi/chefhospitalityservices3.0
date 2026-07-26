@@ -23,7 +23,6 @@ class ApiService {
       box.remove('user_data');
 
       // 2. Force the user back to the Onboarding/Login screen
-      // We use offAll so they cannot click 'back' to enter the app
       Get.offAll(() => const OnboardingScreen());
 
       // 3. Notify the student
@@ -58,12 +57,13 @@ class ApiService {
       return {'success': false, 'message': 'Connection error.'};
     }
   }
+  
 
-  Future<Map<String, dynamic>> getMySkips({required int page}) async {
+ Future<Map<String, dynamic>> getMySkips({required int page, required String month}) async {
     if (token == null) return {'success': false, 'message': 'Auth missing'};
     try {
       final response = await http.get(
-        Uri.parse('${ApiEndpoints.tokenBaseUrl}/my-skips?page=$page'),
+        Uri.parse('${ApiEndpoints.tokenBaseUrl}/my-skips?page=$page&month=$month'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -78,12 +78,14 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> getUserHistory(int page) async {
-    if (token == null)
+  // ✅ UPDATED: Added month parameter so history filters by the selected month properly
+  Future<Map<String, dynamic>> getUserHistory(int page, String month) async {
+    if (token == null) {
       return {'success': false, 'message': 'User not authenticated.'};
+    }
     try {
       final response = await http.get(
-        Uri.parse('${ApiEndpoints.tokenBaseUrl}/my-history?page=$page'),
+        Uri.parse('${ApiEndpoints.tokenBaseUrl}/my-history?page=$page&month=$month'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -96,6 +98,11 @@ class ApiService {
     } catch (e) {
       return {'success': false, 'message': 'Connection error.'};
     }
+  }
+
+  // Optional alias if your controller uses getUserHistoryPaginated
+  Future<Map<String, dynamic>> getUserHistoryPaginated(int page, String month) async {
+    return getUserHistory(page, month);
   }
 
   Future<Map<String, dynamic>> generateToken(String mealType) async {

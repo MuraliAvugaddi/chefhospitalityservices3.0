@@ -1,6 +1,8 @@
 import 'package:chefhospitalityservices/Screens/Navigation_bar/new_main_screen.dart';
 import 'package:chefhospitalityservices/Screens/auth/onbording_screen.dart';
 import 'package:chefhospitalityservices/Screens/auth/signup_page2_screen.dart';
+import 'package:chefhospitalityservices/Screens/auth/signin_screen.dart'; // ✅ Imported SigninScreen
+import 'package:chefhospitalityservices/Screens/otp_verification_screen.dart';
 import 'package:chefhospitalityservices/services/auth_services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -12,10 +14,10 @@ class SignupController extends GetxController {
   final box = GetStorage();
   var isLoading = false.obs;
 
-  // All text controllers for both signup and signin
   late TextEditingController nameController;
   late TextEditingController emailController;
   late TextEditingController passwordController;
+  late TextEditingController otpController;
   late TextEditingController enrollmentNoController;
   late TextEditingController courseController;
   late TextEditingController yearController;
@@ -23,7 +25,9 @@ class SignupController extends GetxController {
   late TextEditingController hostelBlockController;
   late TextEditingController roomController;
 
-  // Holds the value from the gender selection
+  // ✅ Reset Password Field Controller
+  late TextEditingController resetNewPasswordController;
+
   var selectedGender = Rxn<String>();
 
   @override
@@ -32,30 +36,32 @@ class SignupController extends GetxController {
     nameController = TextEditingController();
     emailController = TextEditingController();
     passwordController = TextEditingController();
+    otpController = TextEditingController();
     enrollmentNoController = TextEditingController();
     courseController = TextEditingController();
     yearController = TextEditingController();
     phoneController = TextEditingController();
     hostelBlockController = TextEditingController();
     roomController = TextEditingController();
+
+    // ✅ Initialize Reset Field Controller
+    resetNewPasswordController = TextEditingController();
   }
 
-  /// ✅ UPDATED STEP 1: Only validates email availability.
-  /// Does not create a database entry yet.
   void registerStep1() async {
-    if (nameController.text.isEmpty || emailController.text.isEmpty || passwordController.text.isEmpty) {
-      Get.snackbar('Error', 'Please fill in all basic details', 
+    if (nameController.text.isEmpty ||
+        emailController.text.isEmpty ||
+        passwordController.text.isEmpty ||
+        phoneController.text.isEmpty) {
+      Get.snackbar('Error', 'Please fill in all basic details',
           backgroundColor: Colors.red, colorText: Colors.white);
       return;
     }
 
     try {
       isLoading(true);
-      // Only check if email is free without saving to DB
       await _authService.checkEmailAvailability(emailController.text.trim());
-      
-      // Move to next page if email is available
-      Get.to(() => SignupPage2());
+      Get.to(() => OtpVerificationScreen());
     } catch (e) {
       Get.snackbar('Error', e.toString().replaceAll('Exception: ', ''),
           backgroundColor: Colors.red, colorText: Colors.white);
@@ -64,18 +70,57 @@ class SignupController extends GetxController {
     }
   }
 
-  /// ✅ UPDATED STEP 2: Sends EVERYTHING to the backend to create the user.
-  void registerStep2() async {
-    // Validation for gender
-    if (selectedGender.value == null || selectedGender.value!.isEmpty) {
-      Get.snackbar('Error', 'Please select your gender.',
+  void verifyOtpAndProceed() async {
+    if (otpController.text.trim().isEmpty ||
+        otpController.text.trim().length < 6) {
+      Get.snackbar('Error', 'Please enter the 6-digit verification code.',
           backgroundColor: Colors.red, colorText: Colors.white);
       return;
     }
 
     try {
       isLoading(true);
-      // Send ALL data (Step 1 info + Step 2 info) to create the account in one go
+      final success = await _authService.verifyOtp(
+          emailController.text.trim(), otpController.text.trim());
+
+      if (success) {
+        Get.to(() => SignupPage2());
+      }
+    } catch (e) {
+      Get.snackbar(
+          'Verification Error', e.toString().replaceAll('Exception: ', ''),
+          backgroundColor: Colors.red, colorText: Colors.white);
+    } finally {
+      isLoading(false);
+    }
+  }
+
+  void registerStep2() async {
+    // Check that all mandatory fields are filled out
+    if (enrollmentNoController.text.trim().isEmpty ||
+        courseController.text.trim().isEmpty ||
+        yearController.text.trim().isEmpty ||
+        phoneController.text.trim().isEmpty ||
+        hostelBlockController.text.trim().isEmpty ||
+        roomController.text.trim().isEmpty ||
+        selectedGender.value == null ||
+        selectedGender.value!.isEmpty) {
+      Get.snackbar(
+          'Error', 'Please fill in all text fields and select your gender.',
+          backgroundColor: Colors.red, colorText: Colors.white);
+      return;
+    }
+
+    // ✅ Updated validation: Ensuring enrollment number has at least 7 characters (change to your precise rule if needed)
+    if (enrollmentNoController.text.trim().length < 7) {
+      Get.snackbar(
+          'Error', 'Enrollment number must be at least 7 characters long.',
+          backgroundColor: Colors.red, colorText: Colors.white);
+      return;
+    }
+
+    try {
+      isLoading(true);
       final response = await _authService.registerUser(
         name: nameController.text.trim(),
         email: emailController.text.trim(),
@@ -89,24 +134,20 @@ class SignupController extends GetxController {
         gender: selectedGender.value!,
       );
 
-      // Save token and the complete user object returned from server
       await box.write('token', response['token']);
       await box.write('user_data', response['user']);
 
-      // Connect real-time socket
       SocketService.instance.connectAndListen();
-
-      // Go to main app
       Get.offAll(() => const MainScreen());
     } catch (e) {
-      Get.snackbar('Registration Error', e.toString().replaceAll('Exception: ', ''),
+      Get.snackbar(
+          'Registration Error', e.toString().replaceAll('Exception: ', ''),
           backgroundColor: Colors.red, colorText: Colors.white);
     } finally {
       isLoading(false);
     }
   }
 
-  /// Handles user sign-in
   void signInScreen() async {
     try {
       isLoading.value = true;
@@ -122,13 +163,74 @@ class SignupController extends GetxController {
       clearController();
       Get.offAll(() => const MainScreen());
     } catch (e) {
-      Get.snackbar('Login Failed', e.toString().replaceAll('Exception: ', ''),
+      Get.snackbar(
+        'Login Failed',
+        e.toString().replaceAll('Exception: ', ''),
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.red.shade600,
         colorText: Colors.white,
       );
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  void sendResetCode(String email) async {
+    if (email.isEmpty) {
+      Get.snackbar('Error', 'Please enter your email address.',
+          backgroundColor: Colors.red, colorText: Colors.white);
+      return;
+    }
+    try {
+      isLoading(true);
+      await _authService.requestPasswordReset(email.trim());
+      Get.snackbar('Success', 'Verification code sent to your email.',
+          backgroundColor: Colors.green, colorText: Colors.white);
+
+      emailController.text = email;
+
+      Get.to(() => OtpVerificationScreen(isForgotPassword: true));
+    } catch (e) {
+      Get.snackbar('Error', e.toString().replaceAll('Exception: ', ''),
+          backgroundColor: Colors.red, colorText: Colors.white);
+    } finally {
+      isLoading(false);
+    }
+  }
+
+  void submitNewPassword(String email, String otp, String newPassword) async {
+    final cleanEmail = email.trim();
+    final cleanOtp = otp.trim();
+    final cleanPassword = newPassword.trim();
+
+    if (cleanEmail.isEmpty || cleanOtp.isEmpty || cleanPassword.isEmpty) {
+      Get.snackbar('Error', 'All fields are required.',
+          backgroundColor: Colors.red, colorText: Colors.white);
+      return;
+    }
+    try {
+      isLoading(true);
+      await _authService.finalizePasswordReset(
+          cleanEmail, cleanOtp, cleanPassword);
+
+      Get.snackbar(
+        'Success',
+        'Password updated successfully! Please sign in with your new credentials.',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+
+      clearController();
+      resetNewPasswordController.clear();
+
+      // ✅ FIXED ROUTE SYNTAX: Clears recovery stacks and moves directly to the SigninScreen widget layout cleanly
+      Get.offAll(SigninScreen());
+    } catch (e) {
+      Get.snackbar('Error', e.toString().replaceAll('Exception: ', ''),
+          backgroundColor: Colors.red, colorText: Colors.white);
+    } finally {
+      isLoading(false);
     }
   }
 
@@ -142,6 +244,7 @@ class SignupController extends GetxController {
   void clearController() {
     emailController.clear();
     passwordController.clear();
+    otpController.clear();
   }
 
   @override
@@ -149,12 +252,15 @@ class SignupController extends GetxController {
     nameController.dispose();
     emailController.dispose();
     passwordController.dispose();
+    otpController.dispose();
     enrollmentNoController.dispose();
     courseController.dispose();
     yearController.dispose();
     phoneController.dispose();
     hostelBlockController.dispose();
     roomController.dispose();
+
+    resetNewPasswordController.dispose();
     super.onClose();
   }
 }

@@ -1,9 +1,26 @@
 import 'package:chefhospitalityservices/Screens/Navigation_bar/splashScreen.dart';
-import 'package:chefhospitalityservices/Screens/Navigation_bar/new_main_screen.dart'; // Ensure this path is correct
+import 'package:chefhospitalityservices/Screens/Navigation_bar/new_main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+
+// ==========================================
+// 📌 ADMOB CONFIGURATION & AD UNIT IDs
+// ==========================================
+class AdMobService {
+  // App ID
+  static const String appId = 'ca-app-pub-6236176751859838~4507547875';
+
+  // Banner Ads (3 Placements)
+  static const String qrCodeTopBannerId = 'ca-app-pub-6236176751859838/9897005033';
+  static const String qrCodeDownBannerId = 'ca-app-pub-6236176751859838/5734398744';
+  static const String subscriptionBannerId = 'ca-app-pub-6236176751859838/9488589732';
+
+  // Native / Navigation Ads (2 Placements)
+  static const String tokenGeneratedNativeId = 'ca-app-pub-6236176751859838/7802038746';
+  static const String profileScreenNativeId = 'ca-app-pub-6236176751859838/9875602540';
+}
 
 void main() async {
   // 1. Ensure Flutter is initialized
@@ -12,7 +29,7 @@ void main() async {
   // 2. Initialize GetStorage for local data persistence
   await GetStorage.init();
 
-  // 3. Mobile Ads Configuration
+  // 3. Mobile Ads Configuration (Test Device ID kept for safe local testing)
   RequestConfiguration configuration = RequestConfiguration(
     testDeviceIds: ["11D47A979A88E7802ABEC44384052E3F"],
   );
@@ -42,10 +59,6 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.deepPurple,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      /* ✅ THE CRITICAL FIX: 
-      If the token exists (the user is already logged in), we go straight to MainScreen.
-      If the token is null, we show the SplashScreen/Onboarding.
-      */
       home: token != null ? const MainScreen() : const SplashScreen(),
     );
   }

@@ -22,17 +22,15 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
     _tabController = TabController(length: 2, vsync: this);
   }
 
-  // ✅ UPDATED: Responsive and Polished Confirmation Dialog
   void _showConfirmationDialog() {
     Get.dialog(
       Dialog(
         insetPadding: const EdgeInsets.symmetric(horizontal: 25),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        clipBehavior: Clip.antiAlias, // Ensures clean corners
+        clipBehavior: Clip.antiAlias,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 1. Header with Background Pattern/Color
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 30),
@@ -72,8 +70,6 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
                 ],
               ),
             ),
-
-            // 2. Content Body
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
               child: Column(
@@ -108,8 +104,6 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
                     ),
                   ),
                   const SizedBox(height: 25),
-
-                  // 3. Action Buttons
                   Row(
                     children: [
                       Expanded(
@@ -156,8 +150,6 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
                       ),
                     ],
                   ),
-
-                  // 4. Footer Note
                   const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -209,7 +201,6 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
     );
   }
 
-  // --- 1. SCHEDULE TAB ---
   Widget _buildScheduleTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -224,7 +215,6 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
           const SizedBox(height: 10),
           _mealTypeGrid(),
           const SizedBox(height: 40),
-
           Obx(() => SizedBox(
                 width: double.infinity,
                 height: 60,
@@ -246,10 +236,7 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
                               fontWeight: FontWeight.bold)),
                 ),
               )),
-
           const SizedBox(height: 25),
-
-          // ✅ IMPROVED: Better Note Design for clarity
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -340,7 +327,7 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
     );
   }
 
-  // --- 2. HISTORY TAB ---
+  // --- 2. HISTORY TAB WITH MONTH SELECTOR ---
   Widget _buildHistoryTab() {
     return Obx(() {
       if (controller.isLoading.value && controller.historyList.isEmpty) {
@@ -351,8 +338,12 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
         onRefresh: () => controller.fetchInitialSkips(),
         child: Column(
           children: [
+            // Month Selector Scroll Row
+            _buildMonthSelector(),
+
+            // Summary Card
             Container(
-              margin: const EdgeInsets.all(16),
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: const Color(0xff1A1A1A),
@@ -366,9 +357,19 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
               ),
               child: Column(
                 children: [
-                  Text("Your Saved Meals This Month",
-                      style: GoogleFonts.poppins(
-                          color: Colors.white70, fontSize: 12)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("Skipped Summary",
+                          style: GoogleFonts.poppins(
+                              color: Colors.white70, fontSize: 12)),
+                      Text(controller.selectedHistoryMonth.value,
+                          style: GoogleFonts.poppins(
+                              color: const Color(0xffFADD73),
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold)),
+                    ],
+                  ),
                   const SizedBox(height: 15),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -383,6 +384,8 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
                 ],
               ),
             ),
+
+            // List or Empty view
             Expanded(
               child: controller.historyList.isEmpty
                   ? _buildEmptyState()
@@ -409,6 +412,48 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
         ),
       );
     });
+  }
+
+  Widget _buildMonthSelector() {
+    // Generate the last 6 months for selection
+    final List<String> months = List.generate(6, (index) {
+      final d = DateTime.now().subtract(Duration(days: index * 30));
+      return DateFormat('MMMM yyyy').format(d);
+    }).reversed.toList();
+
+    return Container(
+      height: 55,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        itemCount: months.length,
+        itemBuilder: (context, index) {
+          final m = months[index];
+          bool isSelected = controller.selectedHistoryMonth.value == m;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: ChoiceChip(
+              label: Text(m,
+                  style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected ? Colors.black : Colors.grey[700])),
+              selected: isSelected,
+              selectedColor: const Color(0xffFADD73),
+              backgroundColor: Colors.white,
+              onSelected: (_) => controller.changeHistoryMonth(m),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: isSelected ? Colors.transparent : Colors.grey.shade300,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   Widget _miniStat(String label, int count) {
@@ -505,11 +550,11 @@ class _MealSkippingscreenState extends State<MealSkippingscreen>
   Widget _buildEmptyState() {
     return ListView(
       children: [
-        SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+        SizedBox(height: MediaQuery.of(context).size.height * 0.15),
         Icon(Icons.no_meals_outlined, size: 80, color: Colors.grey[300]),
         const SizedBox(height: 16),
         Center(
-            child: Text("No skipped meals found.",
+            child: Text("No skipped meals found for this month.",
                 style: GoogleFonts.poppins(color: Colors.grey[500]))),
       ],
     );

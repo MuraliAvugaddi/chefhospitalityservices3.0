@@ -1,5 +1,7 @@
 import 'package:chefhospitalityservices/Controllers/auth_controller.dart';
 import 'package:chefhospitalityservices/Controllers/profile_controller.dart';
+
+import 'package:chefhospitalityservices/Screens/AlaCarteScreen.dart';
 import 'package:chefhospitalityservices/Screens/Navigation_bar/custom_navigation_bar.dart';
 import 'package:chefhospitalityservices/Screens/home_screen.dart';
 import 'package:chefhospitalityservices/Screens/profile_screen.dart';
@@ -9,42 +11,103 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  const MainScreen({
+    super.key,
+  });
 
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
+  // ============================================================
+  // SELECTED TAB
+  // ============================================================
+
   int _selectedIndex = 0;
 
-  static final List<Widget> _widgetOptions = <Widget>[
-    HomeScreen(),
-    //   SpacelFoodScreen(),
-    SubscriptionScreen(),
-    const ProfileScreen(),
-  ];
+  // ============================================================
+  // SCREENS
+  // ============================================================
+
+  late final List<Widget> _widgetOptions;
+
+  // ============================================================
+  // INIT
+  // ============================================================
 
   @override
   void initState() {
     super.initState();
-    // ✅ FINAL FIX: Both controllers are now created here.
-    // This guarantees that any screen inside MainScreen (like Home or Profile)
-    // can safely use Get.find() to access them without causing a crash.
-    Get.put(ProfileController());
-    Get.put(SignupController()); // This line was added
+
+    // ----------------------------------------------------------
+    // CONTROLLERS
+    // ----------------------------------------------------------
+
+    if (!Get.isRegistered<ProfileController>()) {
+      Get.put(
+        ProfileController(),
+      );
+    }
+
+    if (!Get.isRegistered<SignupController>()) {
+      Get.put(
+        SignupController(),
+      );
+    }
+
+    // ----------------------------------------------------------
+    // MAIN SCREENS
+    // ----------------------------------------------------------
+
+    _widgetOptions = [
+      HomeScreen(),
+      const AlaCarteScreen(),
+      SubscriptionScreen(),
+      const ProfileScreen(),
+    ];
   }
 
-  void _onItemTapped(int index) {
+  // ============================================================
+  // CHANGE TAB
+  // ============================================================
+
+  void _onItemTapped(
+    int index,
+  ) {
+    if (_selectedIndex == index) {
+      return;
+    }
+
     setState(() {
       _selectedIndex = index;
     });
   }
 
+  // ============================================================
+  // BUILD
+  // ============================================================
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Scaffold(
-      body: Center(child: _widgetOptions.elementAt(_selectedIndex)),
+      backgroundColor: const Color(0xFFFAFAF8),
+
+      // ========================================================
+      // SCREEN
+      // ========================================================
+
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _widgetOptions,
+      ),
+
+      // ========================================================
+      // BOTTOM NAVIGATION
+      // ========================================================
+
       bottomNavigationBar: CustomBottomNavBar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,

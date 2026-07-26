@@ -1,5 +1,3 @@
-
-
 // import 'package:chefhospitalityservices/Screens/auth/onbording_screen.dart';
 // import 'package:chefhospitalityservices/api/api_endpoint.dart';
 // import 'package:http/http.dart' as http;

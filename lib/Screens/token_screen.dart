@@ -36,8 +36,8 @@ class _TokenScreenState extends State<TokenScreen> {
   NativeAd? _nativeAd;
   bool _isAdLoaded = false;
 
-  // --- Your Production Ad IDs ---
-  final String _androidAdUnitId = 'ca-app-pub-6236176751859838/9454234093';
+  // ✅ Updated Production Native Ad ID for Token Generated Screen
+  final String _androidAdUnitId = 'ca-app-pub-6236176751859838/7802038746';
   final String _iosAdUnitId = 'ca-app-pub-6236176751859838/9597704324';
 
   String get _nativeAdUnitId {
@@ -121,8 +121,6 @@ class _TokenScreenState extends State<TokenScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ FIX IS HERE: Added .toLocal() to convert server UTC time to the user's local device time.
-    // Also added a try-catch fallback to DateTime.now() just in case the string is empty or invalid.
     DateTime parsedDate;
     try {
       parsedDate = DateTime.parse(widget.generatedAt).toLocal();
