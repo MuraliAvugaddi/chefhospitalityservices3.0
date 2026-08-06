@@ -41,6 +41,10 @@ const String supportPhoneNumber = '9398315945';
 // Your WhatsApp number = 91 + 9398315945
 const String supportWhatsAppNumber = '919398315945';
 
+// Google Site Policy Link for Cashfree & Play Store Compliance
+const String policyWebLink =
+    'https://sites.google.com/view/chef-hospitality-policies/home';
+
 // ============================================================
 // PROFILE AD CONTROLLER
 // ============================================================
@@ -181,6 +185,27 @@ class ProfileScreen extends StatelessWidget {
       );
 
       _showWhatsAppError();
+    }
+  }
+
+  // ============================================================
+  // OPEN POLICY WEB LINK
+  // ============================================================
+
+  Future<void> _openPolicyLink() async {
+    final Uri url = Uri.parse(policyWebLink);
+    try {
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        Get.snackbar(
+          'Unable to open link',
+          'Please visit $policyWebLink',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.shade400,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error launching policy link: $e');
     }
   }
 
@@ -421,6 +446,23 @@ class ProfileScreen extends StatelessWidget {
                         const SizedBox(height: 28),
 
                         // ======================================
+                        // LEGAL & POLICIES (Added for Cashfree/Play Store)
+                        // ======================================
+
+                        _buildSectionTitle(
+                          title: "Policies & Terms",
+                          icon: Icons.privacy_tip_outlined,
+                          color: primaryDark,
+                          background: primaryLight,
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        _buildPolicyCard(),
+
+                        const SizedBox(height: 28),
+
+                        // ======================================
                         // ADVERTISEMENT
                         // ======================================
 
@@ -448,7 +490,7 @@ class ProfileScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-// APP NAME
+                        // APP NAME
                         Center(
                           child: Text(
                             "Avugaddi Software Systems",
@@ -926,6 +968,92 @@ class ProfileScreen extends StatelessWidget {
                   Icons.arrow_forward_ios_rounded,
                   color: primaryDark,
                   size: 15,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // POLICY & TERMS CARD (Clickable Link for Cashfree/Google Play)
+  // ============================================================
+
+  Widget _buildPolicyCard() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _openPolicyLink,
+        borderRadius: BorderRadius.circular(22),
+        child: Ink(
+          padding: const EdgeInsets.all(17),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: const Color(0xFFF0F0EA),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.035),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                height: 52,
+                width: 52,
+                decoration: BoxDecoration(
+                  color: primaryLight,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.policy_rounded,
+                  color: primaryDark,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 15),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Privacy Policy & Terms",
+                      style: TextStyle(
+                        color: darkTextColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      "View our policies, terms, and menu pricing",
+                      style: TextStyle(
+                        color: lightTextColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                height: 38,
+                width: 38,
+                decoration: BoxDecoration(
+                  color: primaryLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.open_in_new_rounded,
+                  color: primaryDark,
+                  size: 16,
                 ),
               ),
             ],

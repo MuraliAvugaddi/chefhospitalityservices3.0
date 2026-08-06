@@ -57,9 +57,8 @@ class ApiService {
       return {'success': false, 'message': 'Connection error.'};
     }
   }
-  
 
- Future<Map<String, dynamic>> getMySkips({required int page, required String month}) async {
+  Future<Map<String, dynamic>> getMySkips({required int page, required String month}) async {
     if (token == null) return {'success': false, 'message': 'Auth missing'};
     try {
       final response = await http.get(
@@ -106,8 +105,9 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> generateToken(String mealType) async {
-    if (token == null)
+    if (token == null) {
       return {'success': false, 'message': 'User not authenticated.'};
+    }
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/generate'),
@@ -123,6 +123,47 @@ class ApiService {
       return {'success': false, 'message': 'Connection error.'};
     }
   }
+
+  // ==========================================
+  // 🚀 CASHFREE PAYMENT METHODS
+  // ==========================================
+
+  Future<Map<String, dynamic>> createCashfreeOrder() async {
+    if (token == null) return {'success': false, 'message': 'Auth missing'};
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiEndpoints.authBaseUrl}/create-cashfree-order'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      _checkTokenExpiry(response.statusCode);
+      return json.decode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': 'Connection error.'};
+    }
+  }
+
+  Future<Map<String, dynamic>> verifyCashfreePayment(String orderId) async {
+    if (token == null) return {'success': false, 'message': 'Auth missing'};
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiEndpoints.authBaseUrl}/verify-cashfree-payment'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({'orderId': orderId}),
+      );
+      _checkTokenExpiry(response.statusCode);
+      return json.decode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': 'Payment verification failed.'};
+    }
+  }
+
+  // ==========================================
 
   Future<Map<String, dynamic>> getUserPaymentHistory() async {
     if (token == null) return {'success': false, 'message': 'Auth missing'};
@@ -165,9 +206,50 @@ class ApiService {
     }
   }
 
+  // ==========================================
+  // 🚀 DAY SCHOLAR MEAL PAYMENT METHODS
+  // ==========================================
+
+  Future<Map<String, dynamic>> createDayScholarOrder(String mealType) async {
+    if (token == null) return {'success': false, 'message': 'Auth missing'};
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiEndpoints.authBaseUrl}/create-dayscholar-order'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({'mealType': mealType}),
+      );
+      _checkTokenExpiry(response.statusCode);
+      return json.decode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': 'Connection error.'};
+    }
+  }
+
+  Future<Map<String, dynamic>> verifyDayScholarPayment(String orderId, String mealType) async {
+    if (token == null) return {'success': false, 'message': 'Auth missing'};
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiEndpoints.authBaseUrl}/verify-dayscholar-payment'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({'orderId': orderId, 'mealType': mealType}),
+      );
+      _checkTokenExpiry(response.statusCode);
+      return json.decode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': 'Payment verification failed.'};
+    }
+  }
+
   Future<Map<String, dynamic>> getTodayStats() async {
-    if (token == null)
+    if (token == null) {
       return {'success': false, 'message': 'User not authenticated.'};
+    }
     try {
       final response = await http.get(
         Uri.parse('$_baseUrl/stats/today'),

@@ -1,3 +1,4 @@
+import 'package:chefhospitalityservices/Screens/DayScholarOderScreen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -6,494 +7,107 @@ import 'package:google_fonts/google_fonts.dart';
 class MyChoiceWidget extends StatelessWidget {
   const MyChoiceWidget({super.key});
 
-  // ============================================================
-  // BRAND COLORS
-  // ============================================================
-
   static const Color primaryColor = Color(0xFFFADD73);
   static const Color primaryDark = Color(0xFFD5A514);
-  static const Color primaryLight = Color(0xFFFFF8DC);
+  static const Color primaryLight = Color(0xFFFFF9E7);
+  static const Color darkText = Color(0xFF222222);
+  static const Color bodyText = Color(0xFF7B7B7B);
+  static const Color secondaryDark = Color(0xFF669447);
 
-  static const Color darkText = Color(0xFF252A27);
-  static const Color bodyText = Color(0xFF7C837F);
+  bool _isWithinTimeSlot(String mealType) {
+    final now = DateTime.now();
+    final currentTime = now.hour * 60 + now.minute;
 
-  static const Color borderColor = Color(0xFFECECE7);
-  static const Color cardBackground = Color(0xFFFFFFFF);
+    switch (mealType) {
+      case "Breakfast":
+        //  return currentTime >= (7 * 60 + 0) && currentTime <= (12 * 60 + 20);
+        return currentTime >= (7 * 60 + 50) && currentTime <= (10 * 60 + 20);
 
-  // ============================================================
-  // COMING SOON DIALOG
-  // ============================================================
+      case "Lunch":
+        return currentTime >= (11 * 60 + 50) && currentTime <= (14 * 60 + 20);
 
-  void _showLockedDialog() {
-    showCupertinoDialog(
-      context: Get.context!,
-      builder: (context) {
-        return CupertinoAlertDialog(
-          title: const Text(
-            "Coming Soon",
-          ),
-          content: Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: Text(
-              "My Choice ordering will be available soon for Day Scholars.",
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                height: 1.5,
-              ),
-            ),
-          ),
-          actions: [
-            CupertinoDialogAction(
-              onPressed: () => Get.back(),
-              child: const Text(
-                "Got it",
-              ),
-            ),
-          ],
-        );
-      },
-    );
+      case "Snacks":
+        return currentTime >= (16 * 60 + 50) && currentTime <= (18 * 60 + 15);
+
+      case "Dinner":
+        return currentTime >= (19 * 60 + 50) && currentTime <= (21 * 60 + 40);
+
+      default:
+        return false;
+    }
   }
 
-  // ============================================================
-  // BUILD
-  // ============================================================
+  void _openOrderScreen(String mealType, double price) {
+    if (!_isWithinTimeSlot(mealType)) {
+      Get.snackbar(
+        "Meal Time Closed",
+        "Ordering for $mealType is currently closed based on its scheduled timings.",
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    Get.to(() => DayScholarOrderScreen(
+          mealType: mealType,
+          price: price,
+        ));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: cardBackground,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: borderColor,
-        ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.035),
+            color: Colors.black.withOpacity(.05),
             blurRadius: 18,
-            offset: const Offset(0, 6),
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ====================================================
-          // HEADER
-          // ====================================================
-
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(
-              16,
-              16,
-              16,
-              15,
-            ),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  primaryLight,
-                  Color(0xFFFFFCF0),
-                ],
-              ),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(23),
-                topRight: Radius.circular(23),
-              ),
-            ),
-            child: Row(
-              children: [
-                // ICON
-                Container(
-                  height: 46,
-                  width: 46,
-                  decoration: BoxDecoration(
-                    color: primaryColor,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(
-                    Icons.room_service_rounded,
-                    color: darkText,
-                    size: 24,
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
-                // TITLE
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              "My Choice",
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.poppins(
-                                color: darkText,
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 7),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              "COMING SOON",
-                              style: GoogleFonts.poppins(
-                                color: primaryDark,
-                                fontSize: 6.5,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        "Choose meals based on your schedule",
-                        style: GoogleFonts.poppins(
-                          color: bodyText,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ====================================================
-          // CONTENT
-          // ====================================================
-
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              14,
-              14,
-              14,
-              16,
-            ),
-            child: Column(
-              children: [
-                // =================================================
-                // DAY SCHOLAR NOTICE
-                // =================================================
-
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: primaryLight,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: primaryColor.withOpacity(0.55),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        height: 34,
-                        width: 34,
-                        decoration: BoxDecoration(
-                          color: primaryColor,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.school_rounded,
-                          color: darkText,
-                          size: 18,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "For Day Scholars",
-                              style: GoogleFonts.poppins(
-                                color: darkText,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 1),
-                            Text(
-                              "This service is exclusively available for Day Scholars.",
-                              style: GoogleFonts.poppins(
-                                color: bodyText,
-                                fontSize: 8,
-                                height: 1.35,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 14),
-
-                // =================================================
-                // BREAKFAST
-                // =================================================
-
-                _buildMealItem(
-                  title: "Breakfast",
-                  time: "8:00 AM - 9:00 AM",
-                  imagePath: "assets/images/breakfast.png",
-                  backgroundColor: const Color(0xFFFFF1F7),
-                  onTap: _showLockedDialog,
-                ),
-
-                _buildDivider(),
-
-                // =================================================
-                // LUNCH
-                // =================================================
-
-                _buildMealItem(
-                  title: "Lunch",
-                  time: "12:00 PM - 2:00 PM",
-                  imagePath: "assets/images/lunch.png",
-                  backgroundColor: const Color(0xFFF0F8FB),
-                  onTap: _showLockedDialog,
-                ),
-
-                _buildDivider(),
-
-                // =================================================
-                // SNACKS
-                // =================================================
-
-                _buildMealItem(
-                  title: "Snacks",
-                  time: "5:00 PM - 6:00 PM",
-                  imagePath: "assets/images/snakes.png",
-                  backgroundColor: const Color(0xFFFFF4EC),
-                  onTap: _showLockedDialog,
-                ),
-
-                _buildDivider(),
-
-                // =================================================
-                // DINNER
-                // =================================================
-
-                _buildMealItem(
-                  title: "Dinner",
-                  time: "8:00 PM - 9:00 PM",
-                  imagePath: "assets/images/dinner.png",
-                  backgroundColor: primaryLight,
-                  onTap: _showLockedDialog,
-                ),
-
-                const SizedBox(height: 14),
-
-                // =================================================
-                // COMING SOON BOTTOM MESSAGE
-                // =================================================
-
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _showLockedDialog,
-                    borderRadius: BorderRadius.circular(14),
-                    child: Ink(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 13,
-                        vertical: 11,
-                      ),
-                      decoration: BoxDecoration(
-                        color: darkText,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.notifications_none_rounded,
-                            color: Colors.white,
-                            size: 17,
-                          ),
-                          const SizedBox(width: 7),
-                          Text(
-                            "My Choice • Coming Soon",
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ============================================================
-  // MEAL ITEM
-  // ============================================================
-
-  Widget _buildMealItem({
-    required String title,
-    required String time,
-    required String imagePath,
-    required Color backgroundColor,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            vertical: 8,
-            horizontal: 2,
-          ),
-          child: Row(
+          /// Header
+          Row(
             children: [
-              // =================================================
-              // FOOD IMAGE
-              // =================================================
-
               Container(
-                height: 58,
-                width: 58,
-                padding: const EdgeInsets.all(4),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: backgroundColor,
-                  borderRadius: BorderRadius.circular(15),
+                  color: primaryLight,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    imagePath,
-                    fit: BoxFit.contain,
-                    errorBuilder: (
-                      context,
-                      error,
-                      stackTrace,
-                    ) {
-                      return const Icon(
-                        Icons.restaurant_rounded,
-                        color: bodyText,
-                        size: 25,
-                      );
-                    },
-                  ),
+                child: const Icon(
+                  CupertinoIcons.bag_fill,
+                  color: primaryDark,
+                  size: 24,
                 ),
               ),
-
-              const SizedBox(width: 12),
-
-              // =================================================
-              // DETAILS
-              // =================================================
-
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      title,
+                      "Day Scholar Meals",
                       style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
                         color: darkText,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
                       ),
-                    ),
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.access_time_rounded,
-                          color: bodyText,
-                          size: 13,
-                        ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            time,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.poppins(
-                              color: bodyText,
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(width: 8),
-
-              // =================================================
-              // COMING SOON STATUS
-              // =================================================
-
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 9,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: primaryLight,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.lock_clock_rounded,
-                      color: primaryDark,
-                      size: 15,
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      "Soon",
+                      "Order your meals for today",
                       style: GoogleFonts.poppins(
-                        color: primaryDark,
-                        fontSize: 7,
-                        fontWeight: FontWeight.w700,
+                        color: bodyText,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -501,24 +115,190 @@ class MyChoiceWidget extends StatelessWidget {
               ),
             ],
           ),
-        ),
+
+          const SizedBox(height: 20),
+
+          _mealCard(
+            title: "Breakfast",
+            time: "8:00 AM - 9:00 AM",
+            price: "₹60 + GST", // ✅ Updated display text
+            image: "assets/images/breakfast.png",
+            color: const Color(0xffFFF2F7),
+            isOpen: _isWithinTimeSlot("Breakfast"),
+            onTap: () =>
+                _openOrderScreen("Breakfast", 60), // ✅ Updated price value
+          ),
+
+          const SizedBox(height: 14),
+
+          _mealCard(
+            title: "Lunch",
+            time: "12:00 PM - 2:00 PM",
+            price: "₹80 + GST", // ✅ Updated display text
+            image: "assets/images/lunch.png",
+            color: const Color(0xffEEF9FF),
+            isOpen: _isWithinTimeSlot("Lunch"),
+            onTap: () => _openOrderScreen("Lunch", 80), // ✅ Updated price value
+          ),
+
+          const SizedBox(height: 14),
+
+          _mealCard(
+            title: "Snacks",
+            time: "5:00 PM - 6:00 PM",
+            price: "₹50 + GST", // ✅ Updated display text
+            image: "assets/images/snakes.png",
+            color: const Color(0xffFFF8ED),
+            isOpen: _isWithinTimeSlot("Snacks"),
+            onTap: () =>
+                _openOrderScreen("Snacks", 50), // ✅ Updated price value
+          ),
+
+          const SizedBox(height: 14),
+
+          _mealCard(
+            title: "Dinner",
+            time: "8:00 PM - 9:00 PM",
+            price: "₹80 + GST", // ✅ Updated display text
+            image: "assets/images/dinner.png",
+            color: const Color(0xffFFFBEA),
+            isOpen: _isWithinTimeSlot("Dinner"),
+            onTap: () =>
+                _openOrderScreen("Dinner", 80), // ✅ Updated price value
+          ),
+        ],
       ),
     );
   }
 
-  // ============================================================
-  // DIVIDER
-  // ============================================================
-
-  Widget _buildDivider() {
-    return const Padding(
-      padding: EdgeInsets.only(
-        left: 72,
-      ),
-      child: Divider(
-        height: 1,
-        thickness: 1,
-        color: Color(0xFFF0F0EC),
+  Widget _mealCard({
+    required String title,
+    required String time,
+    required String price,
+    required String image,
+    required Color color,
+    required bool isOpen,
+    required VoidCallback onTap,
+  }) {
+    return Opacity(
+      opacity: isOpen ? 1.0 : 0.6,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Ink(
+          padding: const EdgeInsets.only(left: 0, right: 0, top: 6, bottom: 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color:
+                  isOpen ? primaryDark.withOpacity(0.3) : Colors.grey.shade200,
+            ),
+            color: Colors.white,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 62,
+                height: 62,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Image.asset(image),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            title,
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                              color: darkText,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: isOpen
+                                ? secondaryDark.withOpacity(0.1)
+                                : Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            isOpen ? "Open" : "Closed",
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  isOpen ? secondaryDark : Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      time,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: bodyText,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: primaryLight,
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: Text(
+                          price,
+                          style: GoogleFonts.poppins(
+                            color: primaryDark,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isOpen ? primaryColor : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 14,
+                  color: isOpen ? Colors.black87 : Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

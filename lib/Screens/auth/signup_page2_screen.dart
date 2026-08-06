@@ -123,9 +123,6 @@ class _SignupPage2State extends State<SignupPage2> {
         milliseconds: 300,
       ),
       curve: Curves.easeOutCubic,
-
-      // Keeps active field around the upper-middle
-      // instead of directly above keyboard.
       alignment: 0.28,
       alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
     );
@@ -425,17 +422,11 @@ class _SignupPage2State extends State<SignupPage2> {
   @override
   Widget build(BuildContext context) {
     final double keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-
     final bool keyboardOpen = keyboardHeight > 0;
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor: backgroundColor,
-
-      // =========================================================
-      // TAP OUTSIDE = CLOSE KEYBOARD
-      // =========================================================
-
       body: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () {
@@ -462,7 +453,6 @@ class _SignupPage2State extends State<SignupPage2> {
                     _topButton(
                       onTap: () {
                         FocusScope.of(context).unfocus();
-
                         Get.back();
                       },
                       child: const Icon(
@@ -537,10 +527,6 @@ class _SignupPage2State extends State<SignupPage2> {
                     22,
                     8,
                     22,
-
-                    // IMPORTANT:
-                    // Add more bottom room while
-                    // keyboard is open.
                     keyboardOpen ? 140 : 24,
                   ),
                   child: Column(
@@ -719,7 +705,7 @@ class _SignupPage2State extends State<SignupPage2> {
                       ),
 
                       // =========================================
-                      // YEAR
+                      // ACADEMIC YEAR (UPDATED FOR CLARITY)
                       // =========================================
 
                       Container(
@@ -728,7 +714,7 @@ class _SignupPage2State extends State<SignupPage2> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             _buildLabel(
-                              'Year',
+                              'Academic Year (1, 2, 3, 4)',
                             ),
                             const SizedBox(
                               height: 6,
@@ -736,14 +722,23 @@ class _SignupPage2State extends State<SignupPage2> {
                             CustomTextField(
                               controller: _authController.yearController,
                               focusNode: _yearFocus,
-                              hintText: 'e.g. 2',
+                              hintText: 'e.g. 1st Year or 2',
                               icon: Icons.calendar_today_outlined,
-                              keyboardType: TextInputType.number,
-                              labelText: 'Year',
+                              keyboardType: TextInputType.text,
+                              labelText: 'Year of Study',
                               textInputAction: TextInputAction.next,
                               onSubmitted: (_) {
                                 _hostelFocus.requestFocus();
                               },
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Enter your current year of study (e.g., 1, 2, 3, 4)',
+                              style: GoogleFonts.poppins(
+                                color: lightTextColor,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w400,
+                              ),
                             ),
                           ],
                         ),
@@ -1003,7 +998,6 @@ class _SignupPage2State extends State<SignupPage2> {
       child: InkWell(
         onTap: () {
           FocusScope.of(context).unfocus();
-
           _authController.selectedGender.value = gender;
         },
         borderRadius: BorderRadius.circular(14),

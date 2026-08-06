@@ -6,8 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cferrorresponse/cferrorresponse.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfdropcheckoutpayment.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cfpaymentgateway/cfpaymentgatewayservice.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cfsession/cfsession.dart';
+import 'package:flutter_cashfree_pg_sdk/utils/cfenums.dart';
+import 'package:flutter_cashfree_pg_sdk/utils/cfexceptions.dart';
 
 // ============================================================
 // CHEF BRAND COLORS
@@ -31,19 +36,10 @@ const Color cardColor = Colors.white;
 // SUBSCRIPTION PRICE
 // ============================================================
 
-// Base monthly fee
 const double basePrice = 4000;
-
-// GST
 const double gstPercentage = 2;
 const double gstAmount = 80;
-
-// Final amount
 const double totalPrice = 4080;
-
-// Razorpay accepts amount in paise.
-// ₹4,080 = 408000 paise.
-const int razorpayAmount = 408000;
 
 // ============================================================
 // SUBSCRIPTION SCREEN
@@ -58,15 +54,12 @@ class SubscriptionScreen extends StatefulWidget {
 
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
   final ProfileController controller = Get.find<ProfileController>();
-
   final ApiService _apiService = ApiService();
-
   final AudioPlayer _audioPlayer = AudioPlayer();
-
-  late Razorpay _razorpay;
+  final CFPaymentGatewayService cfPaymentGatewayService =
+      CFPaymentGatewayService();
 
   BannerAd? _bannerAd;
-
   bool _isBannerAdLoaded = false;
 
   // ============================================================
@@ -75,14 +68,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   final String _androidBannerAdUnitId =
       'ca-app-pub-6236176751859838/9488589732';
-
   final String _iosBannerAdUnitId = 'ca-app-pub-3940256099942544/2934735716';
 
   String get _bannerAdUnitId {
     if (defaultTargetPlatform == TargetPlatform.android) {
       return _androidBannerAdUnitId;
     }
-
     return _iosBannerAdUnitId;
   }
 
@@ -93,25 +84,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   @override
   void initState() {
     super.initState();
-
     _loadBannerAd();
 
-    _razorpay = Razorpay();
-
-    _razorpay.on(
-      Razorpay.EVENT_PAYMENT_SUCCESS,
-      _handlePaymentSuccess,
-    );
-
-    _razorpay.on(
-      Razorpay.EVENT_PAYMENT_ERROR,
-      _handlePaymentError,
-    );
-
-    _razorpay.on(
-      Razorpay.EVENT_EXTERNAL_WALLET,
-      _handleExternalWallet,
-    );
+    // Register Cashfree Drop Checkout SDK Callback Handlers
+    cfPaymentGatewayService.setCallback(webCallbackSuccess, webCallbackError);
 
     if (controller.isSubscriptionActive) {
       _playSuccessSound();
@@ -119,45 +95,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   }
 
   // ============================================================
-  // SUCCESS SOUND
+  // CASHFREE CALLBACK: SUCCESS
   // ============================================================
 
-  void _playSuccessSound() async {
-    try {
-      // If you want success sound later:
-      //
-      // await _audioPlayer.play(
-      //   AssetSource('audio/success-221935.mp3'),
-      // );
-    } catch (e) {
-      debugPrint(
-        "Error playing success sound: $e",
-      );
-    }
-  }
-
-  // ============================================================
-  // DISPOSE
-  // ============================================================
-
-  @override
-  void dispose() {
-    _bannerAd?.dispose();
-
-    _razorpay.clear();
-
-    _audioPlayer.dispose();
-
-    super.dispose();
-  }
-
-  // ============================================================
-  // PAYMENT SUCCESS
-  // ============================================================
-
-  void _handlePaymentSuccess(
-    PaymentSuccessResponse response,
-  ) async {
+  void webCallbackSuccess(String orderId) async {
     Get.dialog(
       const Center(
         child: CircularProgressIndicator(
@@ -168,10 +109,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
 
     try {
-      final result = await _apiService.verifyOnlinePayment(
-        response.paymentId!,
-        response.orderId ?? "online_${DateTime.now().millisecondsSinceEpoch}",
-      );
+      final result = await _apiService.verifyCashfreePayment(orderId);
 
       if (Get.isDialogOpen == true) {
         Get.back();
@@ -179,7 +117,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
       if (result['success'] == true) {
         _playSuccessSound();
-
         await controller.fetchUserProfile();
 
         Get.snackbar(
@@ -198,7 +135,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       } else {
         Get.snackbar(
           "Account Update Failed",
-          "Payment was successful, but we could not update your subscription. Please contact the administrator.",
+          result['message'] ??
+              "Payment was successful, but subscription sync failed. Contact admin.",
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.shade500,
           colorText: Colors.white,
@@ -213,7 +151,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
       Get.snackbar(
         "Verification Failed",
-        "We could not verify your payment. Please contact the administrator.",
+        "Could not verify transaction with server.",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade500,
         colorText: Colors.white,
@@ -224,15 +162,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   }
 
   // ============================================================
-  // PAYMENT ERROR
+  // CASHFREE CALLBACK: ERROR / FAILURE
   // ============================================================
 
-  void _handlePaymentError(
-    PaymentFailureResponse response,
-  ) {
+  void webCallbackError(CFErrorResponse errorResponse, String orderId) {
     Get.snackbar(
       "Payment Failed",
-      response.message ?? "The transaction was cancelled. Please try again.",
+      errorResponse.getMessage() ??
+          "The transaction was cancelled or failed. Please try again.",
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Colors.red.shade500,
       colorText: Colors.white,
@@ -246,54 +183,86 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   }
 
   // ============================================================
-  // EXTERNAL WALLET
+  // SUCCESS SOUND
   // ============================================================
 
-  void _handleExternalWallet(
-    ExternalWalletResponse response,
-  ) {
-    debugPrint(
-      "External wallet selected: ${response.walletName}",
-    );
+  void _playSuccessSound() async {
+    try {
+      // Audio playback implementation if needed
+    } catch (e) {
+      debugPrint("Error playing success sound: $e");
+    }
   }
 
   // ============================================================
-  // OPEN RAZORPAY
+  // DISPOSE
   // ============================================================
 
-  void _openCheckout() {
-    var options = {
-      // IMPORTANT:
-      // Keep your existing Razorpay key here.
-      'key': 'YOUR_RAZORPAY_KEY',
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    _audioPlayer.dispose();
+    super.dispose();
+  }
 
-      // ₹4,080 = 408000 paise
-      'amount': razorpayAmount,
+  // ============================================================
+  // OPEN CASHFREE CHECKOUT GATEWAY
+  // ============================================================
 
-      'name': 'Chef Hospitality',
-
-      'description': 'Monthly Mess Subscription - ₹4,000 + 2% GST',
-
-      'prefill': {
-        'contact': controller.user.value.phonenumber,
-        'email': controller.user.value.email,
-      },
-
-      'theme': {
-        'color': '#FADD73',
-      },
-    };
+  void _openCheckout() async {
+    Get.dialog(
+      const Center(
+        child: CircularProgressIndicator(
+          color: primaryDark,
+        ),
+      ),
+      barrierDismissible: false,
+    );
 
     try {
-      _razorpay.open(options);
-    } catch (e) {
-      debugPrint(
-        "Razorpay error: $e",
-      );
+      final orderRes = await _apiService.createCashfreeOrder();
 
+      if (Get.isDialogOpen == true) {
+        Get.back();
+      }
+
+      if (orderRes['success'] == true) {
+        String paymentSessionId = orderRes['paymentSessionId'];
+        String orderId = orderRes['orderId'];
+
+        // Build Cashfree Session (Use CFEnvironment.PRODUCTION when publishing live)
+        var session = CFSessionBuilder()
+            .setEnvironment(CFEnvironment.PRODUCTION)
+            //.setEnvironment(CFEnvironment.SANDBOX)
+            .setOrderId(orderId)
+            .setPaymentSessionId(paymentSessionId)
+            .build();
+
+        var cfDropCheckoutPayment =
+            CFDropCheckoutPaymentBuilder().setSession(session!).build();
+
+        cfPaymentGatewayService.doPayment(cfDropCheckoutPayment);
+      } else {
+        Get.snackbar(
+          "Payment Error",
+          orderRes['message'] ??
+              "Unable to initialize gateway order. Please try again.",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.shade500,
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 16,
+        );
+      }
+    } catch (e) {
+      if (Get.isDialogOpen == true) {
+        Get.back();
+      }
+
+      debugPrint("Cashfree checkout error: $e");
       Get.snackbar(
-        "Payment Error",
-        "Unable to open payment gateway. Please try again.",
+        "Connection Error",
+        "Unable to connect to payment server. Check your connection.",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade500,
         colorText: Colors.white,
@@ -301,6 +270,123 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         borderRadius: 16,
       );
     }
+  }
+
+  // ============================================================
+  // SHOW PAYMENT BOTTOM SHEET
+  // ============================================================
+
+  void _showPaymentBottomSheet() {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              "Payment Summary",
+              style: GoogleFonts.poppins(
+                color: darkTextColor,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  _priceRow("Mess Subscription", "₹4,000"),
+                  const SizedBox(height: 10),
+                  _priceRow("GST (2%)", "₹80"),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Divider(height: 1, color: Color(0xFFEAEAE5)),
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        "Total Payable",
+                        style: GoogleFonts.poppins(
+                          color: darkTextColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        "₹4,080",
+                        style: GoogleFonts.poppins(
+                          color: darkTextColor,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton(
+                onPressed: () {
+                  Get.back(); // close bottom sheet
+                  _openCheckout();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: darkTextColor,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.lock_outline_rounded, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      "Proceed to Pay",
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.arrow_forward_rounded, size: 18),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
+    );
   }
 
   // ============================================================
@@ -325,10 +411,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           }
         },
         onAdFailedToLoad: (ad, error) {
-          debugPrint(
-            'Subscription Banner Ad failed: $error',
-          );
-
+          debugPrint('Subscription Banner Ad failed: $error');
           ad.dispose();
         },
       ),
@@ -343,11 +426,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
-
-      // ========================================================
-      // APP BAR
-      // ========================================================
-
       appBar: AppBar(
         toolbarHeight: 68,
         backgroundColor: backgroundColor,
@@ -414,11 +492,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           ),
         ],
       ),
-
-      // ========================================================
-      // BODY
-      // ========================================================
-
       body: Obx(() {
         final bool isActive = controller.isSubscriptionActive;
 
@@ -439,31 +512,15 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   ),
                   child: Column(
                     children: [
-                      // ========================================
-                      // SMALL HEADER
-                      // ========================================
-
                       _buildHeader(isActive),
-
                       const SizedBox(height: 16),
-
-                      // ========================================
-                      // PAYMENT / ACTIVE CARD
-                      // ========================================
-
                       if (isActive) _buildNoDueUI() else _buildPaymentUI(),
-
                       const SizedBox(height: 20),
                     ],
                   ),
                 ),
               ),
             ),
-
-            // ================================================
-            // ADMOB BANNER
-            // ================================================
-
             if (!kIsWeb)
               Container(
                 height: 50,
@@ -472,9 +529,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     ? Colors.transparent
                     : Colors.grey.shade50,
                 child: _isBannerAdLoaded && _bannerAd != null
-                    ? AdWidget(
-                        ad: _bannerAd!,
-                      )
+                    ? AdWidget(ad: _bannerAd!)
                     : Center(
                         child: Text(
                           "Loading Ad...",
@@ -523,7 +578,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       ),
       child: Row(
         children: [
-          // ICON
           Container(
             height: 48,
             width: 48,
@@ -537,10 +591,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               size: 24,
             ),
           ),
-
           const SizedBox(width: 12),
-
-          // TITLE
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -567,8 +618,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               ],
             ),
           ),
-
-          // STATUS
           Container(
             height: 40,
             width: 40,
@@ -617,11 +666,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ==================================================
-          // PLAN TITLE
-          // ==================================================
-
           Row(
             children: [
               Container(
@@ -681,129 +727,34 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               ),
             ],
           ),
-
           const SizedBox(height: 18),
-
-          // ==================================================
-          // PRICE IN CENTER
-          // ==================================================
-
+          Center(
+            child: Text(
+              "₹4,000",
+              style: GoogleFonts.poppins(
+                color: darkTextColor,
+                fontSize: 28,
+                height: 1.2,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -1,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
           Text(
-            "Monthly Fee",
+            "GST will be calculated during payment.",
             style: GoogleFonts.poppins(
               color: lightTextColor,
               fontSize: 11,
               fontWeight: FontWeight.w500,
             ),
           ),
-
-          const SizedBox(height: 1),
-
-          Text(
-            "₹4,000",
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-              color: darkTextColor,
-              fontSize: 38,
-              height: 1.2,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -1.3,
-            ),
-          ),
-
-          const SizedBox(height: 5),
-
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 11,
-              vertical: 5,
-            ),
-            decoration: BoxDecoration(
-              color: primaryLight,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              "+ 2% GST",
-              style: GoogleFonts.poppins(
-                color: primaryDark,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 18),
-
-          // ==================================================
-          // PRICE BREAKDOWN
-          // ==================================================
-
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 15,
-              vertical: 13,
-            ),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFAFAF8),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              children: [
-                _priceRow(
-                  "Mess subscription",
-                  "₹4,000",
-                ),
-                const SizedBox(height: 8),
-                _priceRow(
-                  "GST (2%)",
-                  "₹80",
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(
-                    vertical: 10,
-                  ),
-                  child: Divider(
-                    height: 1,
-                    color: Color(0xFFEAEAE5),
-                  ),
-                ),
-                Row(
-                  children: [
-                    Text(
-                      "Total Payable",
-                      style: GoogleFonts.poppins(
-                        color: darkTextColor,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      "₹4,080",
-                      style: GoogleFonts.poppins(
-                        color: darkTextColor,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // ==================================================
-          // PAY BUTTON
-          // ==================================================
-
+          const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
             height: 54,
             child: ElevatedButton(
-              onPressed: _openCheckout,
+              onPressed: _showPaymentBottomSheet,
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 foregroundColor: darkTextColor,
@@ -816,52 +767,16 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.lock_outline_rounded,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
                   Text(
-                    "Pay ₹4,080",
+                    "Pay Now",
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  const Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 18,
-                  ),
                 ],
               ),
             ),
-          ),
-
-          const SizedBox(height: 11),
-
-          // ==================================================
-          // SECURE PAYMENT
-          // ==================================================
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.verified_user_outlined,
-                color: secondaryDark,
-                size: 14,
-              ),
-              const SizedBox(width: 5),
-              Text(
-                "Secure online payment",
-                style: GoogleFonts.poppins(
-                  color: lightTextColor,
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -897,7 +812,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       ),
       child: Column(
         children: [
-          // CHECK ICON
           Container(
             height: 88,
             width: 88,
@@ -915,9 +829,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               size: 45,
             ),
           ),
-
           const SizedBox(height: 20),
-
           Text(
             "You're all set! 🎉",
             textAlign: TextAlign.center,
@@ -928,9 +840,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               letterSpacing: -0.4,
             ),
           ),
-
           const SizedBox(height: 7),
-
           Text(
             "No dues this month",
             textAlign: TextAlign.center,
@@ -940,9 +850,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               fontWeight: FontWeight.w600,
             ),
           ),
-
           const SizedBox(height: 7),
-
           Text(
             "Your meal subscription is active. You can generate your meal tokens normally.",
             textAlign: TextAlign.center,
@@ -952,9 +860,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               height: 1.5,
             ),
           ),
-
           const SizedBox(height: 22),
-
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(14),
@@ -1007,7 +913,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           title,
           style: GoogleFonts.poppins(
             color: lightTextColor,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -1016,7 +922,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           price,
           style: GoogleFonts.poppins(
             color: darkTextColor,
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
         ),

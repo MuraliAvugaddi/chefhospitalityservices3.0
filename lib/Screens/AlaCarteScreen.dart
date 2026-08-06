@@ -10,7 +10,8 @@ class AlaCarteScreen extends StatelessWidget {
   // LINKS
   // ============================================================
 
-  static const String alaCarteUrl = 'https://avnet-cafe.vercel.app/';
+  static const String alaCarteUrl =
+      'https://chefhospitalityservices.com/pre-order';
 
   static const String supportWhatsAppNumber = '919398315945';
 

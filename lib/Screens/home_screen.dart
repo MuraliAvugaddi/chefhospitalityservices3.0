@@ -49,15 +49,24 @@ class HomeScreen extends StatelessWidget {
     switch (mealType) {
       case "Breakfast":
         return currentTime >= (7 * 60 + 50) && currentTime <= (10 * 60 + 20);
+      //return currentTime >= (00 * 00 + 00) && currentTime <= (10 * 60 + 20);
+      // return currentTime >= 0 && currentTime <= 1440;
+      //  return currentTime >= (14 * 60 + 50) && currentTime <= (18 * 60 + 15);
 
       case "Lunch":
         return currentTime >= (11 * 60 + 50) && currentTime <= (14 * 60 + 20);
+      //return currentTime >= (10 * 60 + 50) && currentTime <= (14 * 60 + 20);
+      //return currentTime >= (14 * 60 + 50) && currentTime <= (18 * 60 + 15);
 
       case "Snacks":
         return currentTime >= (16 * 60 + 50) && currentTime <= (18 * 60 + 15);
+      // return currentTime >= 0 && currentTime <= 1440;
+      // return currentTime >= (14 * 60 + 50) && currentTime <= (18 * 60 + 15);
 
       case "Dinner":
         return currentTime >= (19 * 60 + 50) && currentTime <= (21 * 60 + 40);
+      //   return currentTime >= (13 * 60 + 50) && currentTime <= (21 * 60 + 40);
+      //  return currentTime >= (14 * 60 + 50) && currentTime <= (18 * 60 + 15);
 
       default:
         return false;
@@ -454,7 +463,7 @@ class HomeScreen extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(
                           18,
-                          4,
+                          0,
                           18,
                           0,
                         ),
@@ -492,7 +501,7 @@ class HomeScreen extends StatelessWidget {
                                         "Today's Meals",
                                         style: GoogleFonts.poppins(
                                           color: darkTextColor,
-                                          fontSize: 18,
+                                          fontSize: 17,
                                           fontWeight: FontWeight.w700,
                                         ),
                                       ),
@@ -530,7 +539,7 @@ class HomeScreen extends StatelessWidget {
                               ),
                             ),
 
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 8),
 
                             // ==================================
                             // LUNCH
@@ -550,7 +559,7 @@ class HomeScreen extends StatelessWidget {
                               ),
                             ),
 
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 8),
 
                             // ==================================
                             // SNACKS
@@ -570,7 +579,7 @@ class HomeScreen extends StatelessWidget {
                               ),
                             ),
 
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 8),
 
                             // ==================================
                             // DINNER
@@ -1040,9 +1049,9 @@ class HomeScreen extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(
         16,
-        14,
+        12,
         16,
-        28,
+        20,
       ),
       padding: const EdgeInsets.fromLTRB(
         20,
@@ -1141,24 +1150,24 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 22),
+            const SizedBox(height: 14),
 
             // ==================================================
             // MAIN MESSAGE
             // ==================================================
 
-            Text(
-              "What would you\nlike to eat today?",
-              style: GoogleFonts.poppins(
-                color: darkTextColor,
-                fontSize: 24,
-                height: 1.25,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
-              ),
-            ),
+            // Text(
+            //   "What would you\nlike to eat today?",
+            //   style: GoogleFonts.poppins(
+            //     color: darkTextColor,
+            //     fontSize: 24,
+            //     height: 1.25,
+            //     fontWeight: FontWeight.w800,
+            //     letterSpacing: -0.5,
+            //   ),
+            // ),
 
-            const SizedBox(height: 16),
+            // const SizedBox(height: 16),
 
             // ==================================================
             // SUBSCRIPTION
@@ -1261,12 +1270,14 @@ class MealCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.horizontal(
+            left: Radius.circular(10), right: Radius.circular(22)),
         child: Ink(
-          height: 116,
+          height: 100,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.horizontal(
+                left: Radius.circular(10), right: Radius.circular(22)),
             border: Border.all(
               color: const Color(0xFFF0F0EA),
             ),
@@ -1285,8 +1296,8 @@ class MealCard extends StatelessWidget {
               // =================================================
 
               Container(
-                width: 7,
-                height: double.infinity,
+                width: 8,
+                height: 100,
                 decoration: BoxDecoration(
                   color: accentColor,
                   borderRadius: const BorderRadius.only(
