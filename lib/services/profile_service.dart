@@ -28,4 +28,34 @@ class UserService {
       }
     }
   }
+
+  // ============================================================
+  // DELETE ACCOUNT API CALL
+  // ============================================================
+  Future<bool> deleteAccount() async {
+    final box = GetStorage();
+    final token = box.read('token');
+    if (token == null) {
+      throw Exception('Authentication token not found.');
+    }
+
+    final response = await http.delete(
+      Uri.parse(ApiEndpoints.userProfile),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return true;
+    } else {
+      try {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to delete account');
+      } catch (e) {
+        throw Exception('Failed to delete account. Status code: ${response.statusCode}');
+      }
+    }
+  }
 }

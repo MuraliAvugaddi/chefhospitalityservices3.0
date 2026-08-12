@@ -1,6 +1,7 @@
 import 'package:chefhospitalityservices/Controllers/notwork_controller.dart';
 import 'package:chefhospitalityservices/Controllers/profile_controller.dart';
 import 'package:chefhospitalityservices/Screens/AlaCarteScreen.dart';
+import 'package:chefhospitalityservices/Screens/UserMenuScreen.dart';
 import 'package:chefhospitalityservices/Screens/subscription_screen.dart';
 import 'package:chefhospitalityservices/Screens/scanner_screen.dart';
 import 'package:chefhospitalityservices/widgets/my_Choice_widget.dart';
@@ -34,7 +35,6 @@ class HomeScreen extends StatelessWidget {
   HomeScreen({super.key});
 
   final ProfileController controller = Get.find<ProfileController>();
-
   final NetworkController networkController = Get.put(NetworkController());
 
   // ============================================================
@@ -43,30 +43,21 @@ class HomeScreen extends StatelessWidget {
 
   bool _isWithinTimeSlot(String mealType) {
     final now = DateTime.now();
-
     final currentTime = now.hour * 60 + now.minute;
 
     switch (mealType) {
       case "Breakfast":
         return currentTime >= (7 * 60 + 50) && currentTime <= (10 * 60 + 20);
-      //return currentTime >= (00 * 00 + 00) && currentTime <= (10 * 60 + 20);
-      // return currentTime >= 0 && currentTime <= 1440;
-      //  return currentTime >= (14 * 60 + 50) && currentTime <= (18 * 60 + 15);
 
       case "Lunch":
         return currentTime >= (11 * 60 + 50) && currentTime <= (14 * 60 + 20);
-      //return currentTime >= (10 * 60 + 50) && currentTime <= (14 * 60 + 20);
-      //return currentTime >= (14 * 60 + 50) && currentTime <= (18 * 60 + 15);
 
       case "Snacks":
-        return currentTime >= (16 * 60 + 50) && currentTime <= (18 * 60 + 15);
-      // return currentTime >= 0 && currentTime <= 1440;
-      // return currentTime >= (14 * 60 + 50) && currentTime <= (18 * 60 + 15);
+            return currentTime >= (16 * 60 + 50) && currentTime <= (18 * 60 + 15);
+       // return currentTime >= (0 * 60 + 0) && currentTime <= (23 * 60 + 59);
 
       case "Dinner":
         return currentTime >= (19 * 60 + 50) && currentTime <= (21 * 60 + 40);
-      //   return currentTime >= (13 * 60 + 50) && currentTime <= (21 * 60 + 40);
-      //  return currentTime >= (14 * 60 + 50) && currentTime <= (18 * 60 + 15);
 
       default:
         return false;
@@ -203,7 +194,6 @@ class HomeScreen extends StatelessWidget {
   // ============================================================
 
   void _handleNavigation(String mealType) {
-    // No Internet
     if (networkController.isOffline.value) {
       Get.snackbar(
         "No Internet Connection",
@@ -218,39 +208,23 @@ class HomeScreen extends StatelessWidget {
           color: Colors.white,
         ),
       );
-
       return;
     }
 
     String allowedTime = "";
+    if (mealType == "Breakfast") allowedTime = "8:00 AM - 9:00 AM";
+    if (mealType == "Lunch") allowedTime = "12:00 PM - 2:00 PM";
+    if (mealType == "Snacks") allowedTime = "5:00 PM - 6:00 PM";
+    if (mealType == "Dinner") allowedTime = "8:00 PM - 9:00 PM";
 
-    if (mealType == "Breakfast") {
-      allowedTime = "8:00 AM - 9:00 AM";
-    }
-
-    if (mealType == "Lunch") {
-      allowedTime = "12:00 PM - 2:00 PM";
-    }
-
-    if (mealType == "Snacks") {
-      allowedTime = "5:00 PM - 6:00 PM";
-    }
-
-    if (mealType == "Dinner") {
-      allowedTime = "8:00 PM - 9:00 PM";
-    }
-
-    // Time check
     if (!_isWithinTimeSlot(mealType)) {
       _showTimeRestrictionDialog(
         mealType,
         allowedTime,
       );
-
       return;
     }
 
-    // Subscription check
     if (controller.isSubscriptionActive) {
       Get.to(
         () => ScannerScreen(
@@ -281,12 +255,21 @@ class HomeScreen extends StatelessWidget {
           color: Colors.white,
         ),
       );
-
       return;
     }
 
     Get.to(
       () => const AlaCarteScreen(),
+    );
+  }
+
+  // ============================================================
+  // OPEN MONTHLY MESS MENU SCREEN
+  // ============================================================
+
+  void _openMessMenu() {
+    Get.to(
+      () => const UserMenuScreen(),
     );
   }
 
@@ -347,10 +330,7 @@ class HomeScreen extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () {
                     Get.back();
-
-                    Get.to(
-                      () => SubscriptionScreen(),
-                    );
+                    Get.to(() => SubscriptionScreen());
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
@@ -397,10 +377,7 @@ class HomeScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // ==================================================
             // OFFLINE BANNER
-            // ==================================================
-
             Obx(() {
               if (!networkController.isOffline.value) {
                 return const SizedBox.shrink();
@@ -435,10 +412,7 @@ class HomeScreen extends StatelessWidget {
               );
             }),
 
-            // ==================================================
             // PAGE
-            // ==================================================
-
             Expanded(
               child: RefreshIndicator(
                 color: primaryDark,
@@ -450,28 +424,14 @@ class HomeScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ========================================
-                      // HEADER
-                      // ========================================
-
                       _buildHeader(),
-
-                      // ========================================
-                      // MEALS
-                      // ========================================
-
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          18,
-                          0,
-                          18,
-                          0,
-                        ),
+                        padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // ==================================
-                            // TODAY'S MEALS TITLE
+                            // TODAY'S MEALS TITLE & MENU BUTTON
                             // ==================================
 
                             Row(
@@ -481,9 +441,7 @@ class HomeScreen extends StatelessWidget {
                                   width: 38,
                                   decoration: BoxDecoration(
                                     color: primaryLight,
-                                    borderRadius: BorderRadius.circular(
-                                      12,
-                                    ),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: const Icon(
                                     Icons.restaurant_menu_rounded,
@@ -516,104 +474,105 @@ class HomeScreen extends StatelessWidget {
                                     ],
                                   ),
                                 ),
+
+                                // 🌟 NEW: "VIEW MESS MENU" BUTTON
+                                InkWell(
+                                  onTap: _openMessMenu,
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: primaryLight,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: primaryDark.withOpacity(0.3),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.menu_book_rounded,
+                                          color: primaryDark,
+                                          size: 15,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          "Menu",
+                                          style: GoogleFonts.poppins(
+                                            color: primaryDark,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
 
                             const SizedBox(height: 16),
 
-                            // ==================================
                             // BREAKFAST
-                            // ==================================
-
                             MealCard(
                               mealType: "Breakfast",
                               time: "8:00 AM - 9:00 AM",
                               imagePath: "assets/images/breakfast.png",
                               accentColor: primaryColor,
                               accentLight: primaryLight,
-                              isAvailable: _isWithinTimeSlot(
-                                "Breakfast",
-                              ),
-                              onTap: () => _handleNavigation(
-                                "Breakfast",
-                              ),
+                              isAvailable: _isWithinTimeSlot("Breakfast"),
+                              onTap: () => _handleNavigation("Breakfast"),
                             ),
 
                             const SizedBox(height: 8),
 
-                            // ==================================
                             // LUNCH
-                            // ==================================
-
                             MealCard(
                               mealType: "Lunch",
                               time: "12:00 PM - 2:00 PM",
                               imagePath: "assets/images/lunch.png",
                               accentColor: secondaryColor,
                               accentLight: secondaryLight,
-                              isAvailable: _isWithinTimeSlot(
-                                "Lunch",
-                              ),
-                              onTap: () => _handleNavigation(
-                                "Lunch",
-                              ),
+                              isAvailable: _isWithinTimeSlot("Lunch"),
+                              onTap: () => _handleNavigation("Lunch"),
                             ),
 
                             const SizedBox(height: 8),
 
-                            // ==================================
                             // SNACKS
-                            // ==================================
-
                             MealCard(
                               mealType: "Snacks",
                               time: "5:00 PM - 6:00 PM",
                               imagePath: "assets/images/snakes.png",
                               accentColor: primaryColor,
                               accentLight: primaryLight,
-                              isAvailable: _isWithinTimeSlot(
-                                "Snacks",
-                              ),
-                              onTap: () => _handleNavigation(
-                                "Snacks",
-                              ),
+                              isAvailable: _isWithinTimeSlot("Snacks"),
+                              onTap: () => _handleNavigation("Snacks"),
                             ),
 
                             const SizedBox(height: 8),
 
-                            // ==================================
                             // DINNER
-                            // ==================================
-
                             MealCard(
                               mealType: "Dinner",
                               time: "8:00 PM - 9:00 PM",
                               imagePath: "assets/images/dinner.png",
                               accentColor: secondaryColor,
                               accentLight: secondaryLight,
-                              isAvailable: _isWithinTimeSlot(
-                                "Dinner",
-                              ),
-                              onTap: () => _handleNavigation(
-                                "Dinner",
-                              ),
+                              isAvailable: _isWithinTimeSlot("Dinner"),
+                              onTap: () => _handleNavigation("Dinner"),
                             ),
 
                             const SizedBox(height: 28),
-                            //  const SizedBox(height: 28),
-
-                            // ==================================
-                            // MY CHOICE
-                            // ==================================
 
                             MyChoiceWidget(),
 
                             const SizedBox(height: 20),
 
-                            // ==================================
                             // À LA CARTE SECTION TITLE
-                            // ==================================
-
                             Row(
                               children: [
                                 Expanded(
@@ -675,19 +634,7 @@ class HomeScreen extends StatelessWidget {
 
                             const SizedBox(height: 12),
 
-                            // ==================================
-                            // À LA CARTE CARD
-                            // ==================================
-
                             _buildAlaCarteCard(),
-
-                            const SizedBox(height: 28),
-
-                            // ==================================
-                            // MY CHOICE
-                            // ==================================
-
-//MyChoiceWidget(),
 
                             const SizedBox(height: 20),
                           ],
@@ -737,13 +684,8 @@ class HomeScreen extends StatelessWidget {
           ),
           child: Column(
             children: [
-              // =================================================
-              // TOP AREA
-              // =================================================
-
               Row(
                 children: [
-                  // FOOD ICON
                   Container(
                     height: 56,
                     width: 56,
@@ -757,14 +699,11 @@ class HomeScreen extends StatelessWidget {
                       size: 28,
                     ),
                   ),
-
                   const SizedBox(width: 13),
-
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // TITLE
                         Row(
                           children: [
                             Flexible(
@@ -801,9 +740,7 @@ class HomeScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 3),
-
                         Text(
                           "Order your favourite special food",
                           style: GoogleFonts.poppins(
@@ -815,7 +752,6 @@ class HomeScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-
                   Container(
                     height: 38,
                     width: 38,
@@ -831,13 +767,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-
               const SizedBox(height: 14),
-
-              // =================================================
-              // IMPORTANT 2 HOURS NOTICE
-              // =================================================
-
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
@@ -914,13 +844,7 @@ class HomeScreen extends StatelessWidget {
                   ],
                 ),
               ),
-
               const SizedBox(height: 12),
-
-              // =================================================
-              // BENEFITS
-              // =================================================
-
               Row(
                 children: [
                   Expanded(
@@ -945,13 +869,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-
               const SizedBox(height: 12),
-
-              // =================================================
-              // CTA
-              // =================================================
-
               Container(
                 height: 46,
                 decoration: BoxDecoration(
@@ -1082,10 +1000,6 @@ class HomeScreen extends StatelessWidget {
         () => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ==================================================
-            // USER
-            // ==================================================
-
             Row(
               children: [
                 Container(
@@ -1149,30 +1063,7 @@ class HomeScreen extends StatelessWidget {
                 ),
               ],
             ),
-
             const SizedBox(height: 14),
-
-            // ==================================================
-            // MAIN MESSAGE
-            // ==================================================
-
-            // Text(
-            //   "What would you\nlike to eat today?",
-            //   style: GoogleFonts.poppins(
-            //     color: darkTextColor,
-            //     fontSize: 24,
-            //     height: 1.25,
-            //     fontWeight: FontWeight.w800,
-            //     letterSpacing: -0.5,
-            //   ),
-            // ),
-
-            // const SizedBox(height: 16),
-
-            // ==================================================
-            // SUBSCRIPTION
-            // ==================================================
-
             Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 12,
@@ -1224,15 +1115,8 @@ class HomeScreen extends StatelessWidget {
 
   String _getGreeting() {
     final int hour = DateTime.now().hour;
-
-    if (hour < 12) {
-      return "Good morning";
-    }
-
-    if (hour < 17) {
-      return "Good afternoon";
-    }
-
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
     return "Good evening";
   }
 }
@@ -1245,12 +1129,9 @@ class MealCard extends StatelessWidget {
   final String mealType;
   final String time;
   final String imagePath;
-
   final Color accentColor;
   final Color accentLight;
-
   final bool isAvailable;
-
   final VoidCallback onTap;
 
   const MealCard({
@@ -1270,14 +1151,18 @@ class MealCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.horizontal(
-            left: Radius.circular(10), right: Radius.circular(22)),
+        borderRadius: const BorderRadius.horizontal(
+          left: Radius.circular(10),
+          right: Radius.circular(22),
+        ),
         child: Ink(
           height: 100,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.horizontal(
-                left: Radius.circular(10), right: Radius.circular(22)),
+            borderRadius: const BorderRadius.horizontal(
+              left: Radius.circular(10),
+              right: Radius.circular(22),
+            ),
             border: Border.all(
               color: const Color(0xFFF0F0EA),
             ),
@@ -1291,10 +1176,6 @@ class MealCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // =================================================
-              // COLOR STRIP
-              // =================================================
-
               Container(
                 width: 8,
                 height: 100,
@@ -1306,13 +1187,7 @@ class MealCard extends StatelessWidget {
                   ),
                 ),
               ),
-
               const SizedBox(width: 13),
-
-              // =================================================
-              // IMAGE
-              // =================================================
-
               Container(
                 height: 78,
                 width: 78,
@@ -1326,11 +1201,7 @@ class MealCard extends StatelessWidget {
                   child: Image.asset(
                     imagePath,
                     fit: BoxFit.cover,
-                    errorBuilder: (
-                      context,
-                      error,
-                      stackTrace,
-                    ) {
+                    errorBuilder: (context, error, stackTrace) {
                       return Icon(
                         Icons.restaurant_menu_rounded,
                         color: darkTextColor.withOpacity(0.45),
@@ -1340,13 +1211,7 @@ class MealCard extends StatelessWidget {
                   ),
                 ),
               ),
-
               const SizedBox(width: 14),
-
-              // =================================================
-              // DETAILS
-              // =================================================
-
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1362,9 +1227,7 @@ class MealCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-
                     const SizedBox(height: 5),
-
                     Row(
                       children: [
                         Icon(
@@ -1387,13 +1250,7 @@ class MealCard extends StatelessWidget {
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 7),
-
-                    // =============================================
-                    // STATUS
-                    // =============================================
-
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -1433,13 +1290,7 @@ class MealCard extends StatelessWidget {
                   ],
                 ),
               ),
-
               const SizedBox(width: 8),
-
-              // =================================================
-              // ARROW
-              // =================================================
-
               Container(
                 height: 38,
                 width: 38,
@@ -1453,7 +1304,6 @@ class MealCard extends StatelessWidget {
                   size: 14,
                 ),
               ),
-
               const SizedBox(width: 14),
             ],
           ),

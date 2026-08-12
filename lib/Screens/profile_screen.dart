@@ -30,18 +30,8 @@ const Color cardColor = Colors.white;
 // SUPPORT DETAILS
 // ============================================================
 
-// Your visible phone number
 const String supportPhoneNumber = '9398315945';
-
-// WhatsApp requires:
-// Country code + phone number
-// No "+" symbol, spaces or dashes.
-//
-// India country code = 91
-// Your WhatsApp number = 91 + 9398315945
 const String supportWhatsAppNumber = '919398315945';
-
-// Google Site Policy Link for Cashfree & Play Store Compliance
 const String policyWebLink =
     'https://sites.google.com/view/chef-hospitality-policies/home';
 
@@ -55,14 +45,12 @@ class ProfileAdController extends GetxController {
   final isAdLoaded = false.obs;
 
   final String _androidAdUnitId = 'ca-app-pub-6236176751859838/9454234093';
-
   final String _iosAdUnitId = 'ca-app-pub-6236176751859838/9597704324';
 
   String get _nativeAdUnitId {
     if (defaultTargetPlatform == TargetPlatform.android) {
       return _androidAdUnitId;
     }
-
     return _iosAdUnitId;
   }
 
@@ -71,7 +59,6 @@ class ProfileAdController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-
     if (!kIsWeb) {
       _loadAd();
     }
@@ -95,16 +82,11 @@ class ProfileAdController extends GetxController {
       listener: NativeAdListener(
         onAdLoaded: (Ad ad) {
           debugPrint('Ad loaded for ProfileScreen.');
-
           _nativeAd = ad as NativeAd;
           isAdLoaded.value = true;
         },
-        onAdFailedToLoad: (
-          Ad ad,
-          LoadAdError error,
-        ) {
+        onAdFailedToLoad: (Ad ad, LoadAdError error) {
           debugPrint('Ad failed to load: $error');
-
           isAdLoaded.value = false;
           ad.dispose();
         },
@@ -135,41 +117,22 @@ class ProfileScreen extends StatelessWidget {
 
     final String encodedMessage = Uri.encodeComponent(message);
 
-    // ============================================================
-    // WHATSAPP APP DIRECT LINK
-    // ============================================================
-
     final Uri whatsappApp = Uri.parse(
       'whatsapp://send?phone=$supportWhatsAppNumber&text=$encodedMessage',
     );
-
-    // ============================================================
-    // WHATSAPP WEB FALLBACK
-    // ============================================================
 
     final Uri whatsappWeb = Uri.parse(
       'https://wa.me/$supportWhatsAppNumber?text=$encodedMessage',
     );
 
     try {
-      // ----------------------------------------------------------
-      // FIRST TRY: Open installed WhatsApp application
-      // ----------------------------------------------------------
-
       if (await canLaunchUrl(whatsappApp)) {
         final bool opened = await launchUrl(
           whatsappApp,
           mode: LaunchMode.externalApplication,
         );
-
-        if (opened) {
-          return;
-        }
+        if (opened) return;
       }
-
-      // ----------------------------------------------------------
-      // SECOND TRY: Open official WhatsApp wa.me link
-      // ----------------------------------------------------------
 
       final bool webOpened = await launchUrl(
         whatsappWeb,
@@ -180,10 +143,7 @@ class ProfileScreen extends StatelessWidget {
         _showWhatsAppError();
       }
     } catch (e) {
-      debugPrint(
-        'WhatsApp opening error: $e',
-      );
-
+      debugPrint('WhatsApp opening error: $e');
       _showWhatsAppError();
     }
   }
@@ -276,19 +236,13 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ProfileController controller = Get.find<ProfileController>();
-
     final SignupController authController = Get.find<SignupController>();
-
     final ProfileAdController adController = Get.put(ProfileAdController());
 
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
         child: Obx(() {
-          // ==================================================
-          // LOADING
-          // ==================================================
-
           if (controller.isLoading.value &&
               controller.user.value.name == 'Guest') {
             return const Center(
@@ -298,17 +252,9 @@ class ProfileScreen extends StatelessWidget {
             );
           }
 
-          // ==================================================
-          // ERROR
-          // ==================================================
-
           if (controller.errorMessage.value.isNotEmpty) {
             return _buildErrorState(controller);
           }
-
-          // ==================================================
-          // MAIN PROFILE UI
-          // ==================================================
 
           return RefreshIndicator(
             color: primaryDark,
@@ -317,12 +263,9 @@ class ProfileScreen extends StatelessWidget {
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
-                // HEADER
                 SliverToBoxAdapter(
                   child: _buildHeader(controller),
                 ),
-
-                // CONTENT
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(
                     18,
@@ -333,10 +276,6 @@ class ProfileScreen extends StatelessWidget {
                   sliver: SliverList(
                     delegate: SliverChildListDelegate(
                       [
-                        // ======================================
-                        // PERSONAL INFORMATION
-                        // ======================================
-
                         _buildSectionTitle(
                           title: "Personal Information",
                           icon: Icons.person_outline_rounded,
@@ -367,10 +306,6 @@ class ProfileScreen extends StatelessWidget {
                         ),
 
                         const SizedBox(height: 28),
-
-                        // ======================================
-                        // ACADEMIC DETAILS
-                        // ======================================
 
                         _buildSectionTitle(
                           title: "Academic Details",
@@ -411,10 +346,6 @@ class ProfileScreen extends StatelessWidget {
 
                         const SizedBox(height: 28),
 
-                        // ======================================
-                        // ACTIVITY
-                        // ======================================
-
                         _buildSectionTitle(
                           title: "Activity",
                           icon: Icons.history_rounded,
@@ -427,10 +358,6 @@ class ProfileScreen extends StatelessWidget {
                         _buildHistoryCard(),
 
                         const SizedBox(height: 28),
-
-                        // ======================================
-                        // HELP & SUPPORT
-                        // ======================================
 
                         _buildSectionTitle(
                           title: "Help & Support",
@@ -445,10 +372,6 @@ class ProfileScreen extends StatelessWidget {
 
                         const SizedBox(height: 28),
 
-                        // ======================================
-                        // LEGAL & POLICIES (Added for Cashfree/Play Store)
-                        // ======================================
-
                         _buildSectionTitle(
                           title: "Policies & Terms",
                           icon: Icons.privacy_tip_outlined,
@@ -462,23 +385,22 @@ class ProfileScreen extends StatelessWidget {
 
                         const SizedBox(height: 28),
 
-                        // ======================================
-                        // ADVERTISEMENT
-                        // ======================================
-
                         if (!kIsWeb) _buildAdvertisement(adController),
 
                         if (!kIsWeb) const SizedBox(height: 28),
 
                         // ======================================
-                        // LOGOUT
+                        // ACCOUNT DELETION & LOGOUT
                         // ======================================
+
+                        _buildDeleteAccountButton(controller),
+
+                        const SizedBox(height: 12),
 
                         _buildLogoutButton(authController),
 
                         const SizedBox(height: 24),
 
-                        // APP NAME
                         Center(
                           child: Text(
                             "from",
@@ -490,7 +412,6 @@ class ProfileScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-                        // APP NAME
                         Center(
                           child: Text(
                             "Avugaddi Software Systems",
@@ -519,22 +440,10 @@ class ProfileScreen extends StatelessWidget {
   // PROFILE HEADER
   // ============================================================
 
-  Widget _buildHeader(
-    ProfileController controller,
-  ) {
+  Widget _buildHeader(ProfileController controller) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(
-        18,
-        14,
-        18,
-        28,
-      ),
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        26,
-      ),
+      margin: const EdgeInsets.fromLTRB(18, 14, 18, 28),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 26),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -544,11 +453,7 @@ class ProfileScreen extends StatelessWidget {
             Color(0xFFFFE99A),
             Color(0xFFFFF3C4),
           ],
-          stops: [
-            0.0,
-            0.55,
-            1.0,
-          ],
+          stops: [0.0, 0.55, 1.0],
         ),
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
@@ -561,16 +466,10 @@ class ProfileScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // ==================================================
-          // HEADER TOP ROW
-          // ==================================================
-
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _headerIcon(
-                Icons.person_outline_rounded,
-              ),
+              _headerIcon(Icons.person_outline_rounded),
               const Text(
                 "My Profile",
                 style: TextStyle(
@@ -579,18 +478,10 @@ class ProfileScreen extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              _headerIcon(
-                Icons.verified_user_outlined,
-              ),
+              _headerIcon(Icons.verified_user_outlined),
             ],
           ),
-
           const SizedBox(height: 26),
-
-          // ==================================================
-          // PROFILE AVATAR
-          // ==================================================
-
           Container(
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
@@ -618,13 +509,7 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
           ),
-
           const SizedBox(height: 18),
-
-          // ==================================================
-          // STUDENT NAME
-          // ==================================================
-
           Text(
             controller.user.value.name.isEmpty
                 ? "Student"
@@ -639,13 +524,7 @@ class ProfileScreen extends StatelessWidget {
               letterSpacing: -0.4,
             ),
           ),
-
           const SizedBox(height: 8),
-
-          // ==================================================
-          // EMAIL
-          // ==================================================
-
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -671,13 +550,7 @@ class ProfileScreen extends StatelessWidget {
               ),
             ],
           ),
-
           const SizedBox(height: 20),
-
-          // ==================================================
-          // ACTIVE STUDENT BADGE
-          // ==================================================
-
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -720,9 +593,7 @@ class ProfileScreen extends StatelessWidget {
   // HEADER ICON
   // ============================================================
 
-  Widget _headerIcon(
-    IconData icon,
-  ) {
+  Widget _headerIcon(IconData icon) {
     return Container(
       height: 42,
       width: 42,
@@ -784,21 +655,14 @@ class ProfileScreen extends StatelessWidget {
   // INFORMATION CARD
   // ============================================================
 
-  Widget _buildInformationCard({
-    required List<Widget> children,
-  }) {
+  Widget _buildInformationCard({required List<Widget> children}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 5,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: const Color(0xFFF0F0EA),
-        ),
+        border: Border.all(color: const Color(0xFFF0F0EA)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.035),
@@ -807,9 +671,7 @@ class ProfileScreen extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        children: children,
-      ),
+      child: Column(children: children),
     );
   }
 
@@ -827,9 +689,7 @@ class ProfileScreen extends StatelessWidget {
     final String displayValue = value.trim().isEmpty ? "Not available" : value;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: 14,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 14),
       child: Row(
         children: [
           Container(
@@ -895,20 +755,14 @@ class ProfileScreen extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
-          Get.to(
-            () => HistoryScreen(),
-          );
-        },
+        onTap: () => Get.to(() => HistoryScreen()),
         borderRadius: BorderRadius.circular(22),
         child: Ink(
           padding: const EdgeInsets.all(17),
           decoration: BoxDecoration(
             color: cardColor,
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: const Color(0xFFF0F0EA),
-            ),
+            border: Border.all(color: const Color(0xFFF0F0EA)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.035),
@@ -978,7 +832,7 @@ class ProfileScreen extends StatelessWidget {
   }
 
   // ============================================================
-  // POLICY & TERMS CARD (Clickable Link for Cashfree/Google Play)
+  // POLICY & TERMS CARD
   // ============================================================
 
   Widget _buildPolicyCard() {
@@ -992,9 +846,7 @@ class ProfileScreen extends StatelessWidget {
           decoration: BoxDecoration(
             color: cardColor,
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: const Color(0xFFF0F0EA),
-            ),
+            border: Border.all(color: const Color(0xFFF0F0EA)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.035),
@@ -1074,9 +926,7 @@ class ProfileScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: const Color(0xFFF0F0EA),
-        ),
+        border: Border.all(color: const Color(0xFFF0F0EA)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.035),
@@ -1088,10 +938,6 @@ class ProfileScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ================================================
-          // SUPPORT TOP
-          // ================================================
-
           Row(
             children: [
               Container(
@@ -1135,13 +981,7 @@ class ProfileScreen extends StatelessWidget {
               ),
             ],
           ),
-
           const SizedBox(height: 17),
-
-          // ================================================
-          // WHATSAPP BUTTON
-          // ================================================
-
           SizedBox(
             width: double.infinity,
             height: 52,
@@ -1159,10 +999,7 @@ class ProfileScreen extends StatelessWidget {
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.chat_rounded,
-                    size: 20,
-                  ),
+                  Icon(Icons.chat_rounded, size: 20),
                   SizedBox(width: 8),
                   Text(
                     "Chat on WhatsApp",
@@ -1172,21 +1009,12 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
                   SizedBox(width: 7),
-                  Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 17,
-                  ),
+                  Icon(Icons.arrow_forward_rounded, size: 17),
                 ],
               ),
             ),
           ),
-
           const SizedBox(height: 10),
-
-          // ================================================
-          // CALL BUTTON
-          // ================================================
-
           SizedBox(
             width: double.infinity,
             height: 48,
@@ -1194,9 +1022,7 @@ class ProfileScreen extends StatelessWidget {
               onPressed: _callSupport,
               style: OutlinedButton.styleFrom(
                 foregroundColor: darkTextColor,
-                side: const BorderSide(
-                  color: Color(0xFFEAEAE5),
-                ),
+                side: const BorderSide(color: Color(0xFFEAEAE5)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
@@ -1204,11 +1030,7 @@ class ProfileScreen extends StatelessWidget {
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.phone_outlined,
-                    size: 18,
-                    color: darkTextColor,
-                  ),
+                  Icon(Icons.phone_outlined, size: 18, color: darkTextColor),
                   SizedBox(width: 8),
                   Text(
                     "+91 93983 15945",
@@ -1222,21 +1044,11 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
           ),
-
           const SizedBox(height: 12),
-
-          // ================================================
-          // SUPPORT INFO
-          // ================================================
-
           const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.verified_outlined,
-                size: 13,
-                color: lightTextColor,
-              ),
+              Icon(Icons.verified_outlined, size: 13, color: lightTextColor),
               SizedBox(width: 5),
               Text(
                 "Chef Hospitality Support",
@@ -1257,9 +1069,7 @@ class ProfileScreen extends StatelessWidget {
   // ADVERTISEMENT
   // ============================================================
 
-  Widget _buildAdvertisement(
-    ProfileAdController adController,
-  ) {
+  Widget _buildAdvertisement(ProfileAdController adController) {
     return Obx(() {
       if (adController.isAdLoaded.value && adController.nativeAd != null) {
         return Container(
@@ -1269,9 +1079,7 @@ class ProfileScreen extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: const Color(0xFFF0F0EA),
-            ),
+            border: Border.all(color: const Color(0xFFF0F0EA)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.03),
@@ -1281,9 +1089,7 @@ class ProfileScreen extends StatelessWidget {
             ],
           ),
           child: AdWidget(
-            key: ValueKey(
-              adController.nativeAd.hashCode,
-            ),
+            key: ValueKey(adController.nativeAd.hashCode),
             ad: adController.nativeAd!,
           ),
         );
@@ -1295,9 +1101,7 @@ class ProfileScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: const Color(0xFFF0F0EA),
-          ),
+          border: Border.all(color: const Color(0xFFF0F0EA)),
         ),
         child: const Center(
           child: Row(
@@ -1327,20 +1131,132 @@ class ProfileScreen extends StatelessWidget {
   }
 
   // ============================================================
+  // DELETE ACCOUNT BUTTON
+  // ============================================================
+
+  Widget _buildDeleteAccountButton(ProfileController profileController) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton(
+        onPressed: () {
+          _showDeleteAccountDialog(profileController);
+        },
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.red.shade700,
+          side: BorderSide(
+            color: Colors.red.shade200,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.delete_forever_rounded,
+              color: Colors.red.shade700,
+              size: 21,
+            ),
+            const SizedBox(width: 9),
+            Text(
+              "Delete Account",
+              style: TextStyle(
+                color: Colors.red.shade700,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // DELETE ACCOUNT CONFIRMATION DIALOG
+  // ============================================================
+
+  void _showDeleteAccountDialog(ProfileController profileController) {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        title: const Row(
+          children: [
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.red,
+            ),
+            SizedBox(width: 10),
+            Text(
+              "Delete Account?",
+              style: TextStyle(
+                color: darkTextColor,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          "This action is permanent and cannot be undone. All your account data and history will be completely erased.",
+          style: TextStyle(
+            color: lightTextColor,
+            fontSize: 14,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Get.back();
+            },
+            child: const Text(
+              "Cancel",
+              style: TextStyle(
+                color: lightTextColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              profileController.deleteAccount();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text(
+              "Permanently Delete",
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
   // LOGOUT BUTTON
   // ============================================================
 
-  Widget _buildLogoutButton(
-    SignupController authController,
-  ) {
+  Widget _buildLogoutButton(SignupController authController) {
     return SizedBox(
       width: double.infinity,
       height: 56,
       child: ElevatedButton(
         onPressed: () {
-          _showLogoutDialog(
-            authController,
-          );
+          _showLogoutDialog(authController);
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFFFFEEEE),
@@ -1381,9 +1297,7 @@ class ProfileScreen extends StatelessWidget {
   // LOGOUT DIALOG
   // ============================================================
 
-  void _showLogoutDialog(
-    SignupController authController,
-  ) {
+  void _showLogoutDialog(SignupController authController) {
     Get.dialog(
       AlertDialog(
         backgroundColor: Colors.white,
@@ -1429,7 +1343,6 @@ class ProfileScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               Get.back();
-
               authController.logout();
             },
             style: ElevatedButton.styleFrom(
@@ -1456,9 +1369,7 @@ class ProfileScreen extends StatelessWidget {
   // ERROR SCREEN
   // ============================================================
 
-  Widget _buildErrorState(
-    ProfileController controller,
-  ) {
+  Widget _buildErrorState(ProfileController controller) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(30),
@@ -1501,12 +1412,8 @@ class ProfileScreen extends StatelessWidget {
               onPressed: () {
                 controller.fetchUserProfile();
               },
-              icon: const Icon(
-                Icons.refresh_rounded,
-              ),
-              label: const Text(
-                "Try Again",
-              ),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text("Try Again"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 foregroundColor: darkTextColor,

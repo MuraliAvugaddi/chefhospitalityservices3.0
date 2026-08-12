@@ -1,3 +1,4 @@
+import 'package:chefhospitalityservices/Controllers/auth_controller.dart';
 import 'package:chefhospitalityservices/Models/user_model.dart';
 import 'package:chefhospitalityservices/services/profile_service.dart';
 import 'package:flutter/material.dart';
@@ -45,13 +46,11 @@ class ProfileController extends GetxController with WidgetsBindingObserver {
   @override
   void onInit() {
     super.onInit();
-    // ✅ Observe app lifecycle to catch updates missed while app was closed
     WidgetsBinding.instance.addObserver(this); 
     
     user = _guestUser.obs;
     loadUserProfileFromStorage();
 
-    // Automatically refresh UI if local storage changes
     box.listenKey('user_data', (storedValue) {
       if (storedValue != null) {
         loadUserProfileFromStorage();
@@ -66,16 +65,13 @@ class ProfileController extends GetxController with WidgetsBindingObserver {
   @override
   void onReady() {
     super.onReady();
-    // ✅ CRITICAL: Perform a silent sync the moment the controller is ready
     fetchUserProfile(showLoading: false);
   }
 
-  // ✅ THIS FIXES THE "APP CLOSED" ISSUE
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       debugPrint("App Resumed: Forcing silent data sync with server...");
-      // Re-fetch latest status from DB and ensure socket is connected
       fetchUserProfile(showLoading: false); 
       SocketService.instance.connectAndListen(); 
     }
@@ -92,7 +88,6 @@ class ProfileController extends GetxController with WidgetsBindingObserver {
     try {
       final Map<String, dynamic>? userData = box.read('user_data');
       if (userData != null && userData.isNotEmpty) {
-        // Support both nested 'user' objects and flat objects
         user.value = User.fromJson(userData.containsKey('user') ? userData['user'] : userData);
       } else {
         user.value = _guestUser;
@@ -109,13 +104,11 @@ class ProfileController extends GetxController with WidgetsBindingObserver {
     bool newStatus = data['isApproved'] ?? false;
     String? newExpiryStr = data['accessExpiresAt'];
 
-    // 1. Update reactive memory
     user.update((val) {
       val!.isApproved = newStatus;
       val.accessExpiresAt = newExpiryStr != null ? DateTime.parse(newExpiryStr) : null;
     });
 
-    // 2. Persist to local storage so it stays correct on next restart
     final Map<String, dynamic>? storedUserData = box.read('user_data');
     if (storedUserData != null) {
       if (storedUserData.containsKey('user')) {
@@ -128,7 +121,6 @@ class ProfileController extends GetxController with WidgetsBindingObserver {
       box.write('user_data', storedUserData);
     }
 
-    // 3. User Feedback
     Get.snackbar(
       "Access Updated",
       newStatus ? "Mess access granted!" : "Access revoked.",
@@ -140,7 +132,6 @@ class ProfileController extends GetxController with WidgetsBindingObserver {
   }
 
   /// Syncs user data with the Backend API
-  /// [showLoading] set to false for silent background/lifecycle syncs
   Future<void> fetchUserProfile({bool showLoading = true}) async {
     try {
       if (showLoading) isLoading(true);
@@ -148,7 +139,6 @@ class ProfileController extends GetxController with WidgetsBindingObserver {
       
       User fetchedUser = await _userService.fetchUserProfile();
       
-      // Update state and persistent storage
       user.value = fetchedUser;
       final Map<String, dynamic> storedUserData = box.read('user_data') ?? {};
       storedUserData['user'] = fetchedUser.toJson();
@@ -164,6 +154,42 @@ class ProfileController extends GetxController with WidgetsBindingObserver {
       debugPrint("❌ Background sync failed: $e");
     } finally {
       if (showLoading) isLoading(false);
+    }
+  }
+
+  // ============================================================
+  // DELETE ACCOUNT METHOD
+  // ============================================================
+  Future<void> deleteAccount() async {
+    try {
+      isLoading(true);
+      bool isDeleted = await _userService.deleteAccount();
+
+      if (isDeleted) {
+        await box.remove('user_data');
+        await box.remove('token');
+        
+        Get.find<SignupController>().logout();
+        
+        Get.snackbar(
+          'Account Deleted',
+          'Your account and personal data have been permanently deleted.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.black87,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      Get.snackbar(
+        'Deletion Error',
+        errorMsg,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade400,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading(false);
     }
   }
 }
