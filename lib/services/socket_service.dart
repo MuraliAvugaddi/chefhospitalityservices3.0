@@ -4,8 +4,6 @@ import 'package:get/get.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:get_storage/get_storage.dart';
 
-// lib/services/socket_service.dart
-
 class SocketService {
   SocketService._internal();
   static final SocketService instance = SocketService._internal();
@@ -33,10 +31,14 @@ class SocketService {
 
     _socket!.onConnect((_) => _socket!.emit('registerUser', userId));
 
-    // ✅ AUTOMATIC UPDATE: No controller dependency
+    // ✅ AUTOMATIC REAL-TIME UPDATE LISTENER (Updated & Verified)
     _socket!.on('statusUpdated', (data) {
       if (data != null) {
-        _syncStatusToStorage(data);
+        // Check if the update is meant for this logged-in student (or broadcasted globally)
+        String? targetUserId = data['userId'];
+        if (targetUserId == null || targetUserId == userId) {
+          _syncStatusToStorage(data);
+        }
       }
     });
   }

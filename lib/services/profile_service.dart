@@ -30,6 +30,37 @@ class UserService {
   }
 
   // ============================================================
+  // SUBMIT FEEDBACK API CALL
+  // ============================================================
+  Future<bool> submitFeedback(int rating, String message) async {
+    final box = GetStorage();
+    final token = box.read('token');
+    if (token == null) {
+      throw Exception('Authentication token not found.');
+    }
+
+    final response = await http.post(
+      Uri.parse(ApiEndpoints.feedbackSubmit),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'rating': rating, 'message': message}),
+    );
+
+    if (response.statusCode == 201) {
+      return true;
+    } else {
+      try {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to submit feedback');
+      } catch (e) {
+        throw Exception('Failed to submit feedback. Status code: ${response.statusCode}');
+      }
+    }
+  }
+
+  // ============================================================
   // DELETE ACCOUNT API CALL
   // ============================================================
   Future<bool> deleteAccount() async {

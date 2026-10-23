@@ -1,12 +1,12 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:chefhospitalityservices/Controllers/auth_controller.dart';
 import 'package:chefhospitalityservices/Controllers/profile_controller.dart';
 import 'package:chefhospitalityservices/Screens/history_screen.dart';
+import 'package:chefhospitalityservices/Screens/meal_skippingscreen.dart';
+import 'package:chefhospitalityservices/services/app_update_service.dart';
 
 // ============================================================
 // CHEF APP BRAND COLORS
@@ -32,84 +32,41 @@ const Color cardColor = Colors.white;
 
 const String supportPhoneNumber = '9398315945';
 const String supportWhatsAppNumber = '919398315945';
+
 const String policyWebLink =
     'https://sites.google.com/view/chef-hospitality-policies/home';
-
-// ============================================================
-// PROFILE AD CONTROLLER
-// ============================================================
-
-class ProfileAdController extends GetxController {
-  NativeAd? _nativeAd;
-
-  final isAdLoaded = false.obs;
-
-  final String _androidAdUnitId = 'ca-app-pub-6236176751859838/9454234093';
-  final String _iosAdUnitId = 'ca-app-pub-6236176751859838/9597704324';
-
-  String get _nativeAdUnitId {
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return _androidAdUnitId;
-    }
-    return _iosAdUnitId;
-  }
-
-  NativeAd? get nativeAd => _nativeAd;
-
-  @override
-  void onInit() {
-    super.onInit();
-    if (!kIsWeb) {
-      _loadAd();
-    }
-  }
-
-  @override
-  void onClose() {
-    _nativeAd?.dispose();
-    super.onClose();
-  }
-
-  void _loadAd() {
-    if (kIsWeb) {
-      isAdLoaded.value = false;
-      return;
-    }
-
-    _nativeAd = NativeAd(
-      adUnitId: _nativeAdUnitId,
-      request: const AdRequest(),
-      listener: NativeAdListener(
-        onAdLoaded: (Ad ad) {
-          debugPrint('Ad loaded for ProfileScreen.');
-          _nativeAd = ad as NativeAd;
-          isAdLoaded.value = true;
-        },
-        onAdFailedToLoad: (Ad ad, LoadAdError error) {
-          debugPrint('Ad failed to load: $error');
-          isAdLoaded.value = false;
-          ad.dispose();
-        },
-      ),
-      nativeTemplateStyle: NativeTemplateStyle(
-        templateType: TemplateType.medium,
-        mainBackgroundColor: Colors.white,
-        cornerRadius: 18,
-      ),
-    )..load();
-  }
-}
 
 // ============================================================
 // PROFILE SCREEN
 // ============================================================
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
-  // ============================================================
-  // OPEN WHATSAPP
-  // ============================================================
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  late final ProfileController controller;
+  late final SignupController authController;
+
+  @override
+  void initState() {
+    super.initState();
+
+    controller = Get.find<ProfileController>();
+    authController = Get.find<SignupController>();
+
+    // Check for app update in background
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppUpdateService.checkForUpdate();
+    });
+  }
+
+  // ==========================================================
+  // WHATSAPP
+  // ==========================================================
 
   Future<void> _openWhatsApp() async {
     const String message =
@@ -131,7 +88,10 @@ class ProfileScreen extends StatelessWidget {
           whatsappApp,
           mode: LaunchMode.externalApplication,
         );
-        if (opened) return;
+
+        if (opened) {
+          return;
+        }
       }
 
       final bool webOpened = await launchUrl(
@@ -139,79 +99,17 @@ class ProfileScreen extends StatelessWidget {
         mode: LaunchMode.externalApplication,
       );
 
-      if (!webOpened) {
+      if (!webOpened && mounted) {
         _showWhatsAppError();
       }
     } catch (e) {
-      debugPrint('WhatsApp opening error: $e');
-      _showWhatsAppError();
-    }
-  }
+      debugPrint('WhatsApp error: $e');
 
-  // ============================================================
-  // OPEN POLICY WEB LINK
-  // ============================================================
-
-  Future<void> _openPolicyLink() async {
-    final Uri url = Uri.parse(policyWebLink);
-    try {
-      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-        Get.snackbar(
-          'Unable to open link',
-          'Please visit $policyWebLink',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.shade400,
-          colorText: Colors.white,
-        );
+      if (mounted) {
+        _showWhatsAppError();
       }
-    } catch (e) {
-      debugPrint('Error launching policy link: $e');
     }
   }
-
-  // ============================================================
-  // OPEN PHONE CALL
-  // ============================================================
-
-  Future<void> _callSupport() async {
-    final Uri phoneUri = Uri(
-      scheme: 'tel',
-      path: supportPhoneNumber,
-    );
-
-    try {
-      final bool opened = await launchUrl(
-        phoneUri,
-        mode: LaunchMode.externalApplication,
-      );
-
-      if (!opened) {
-        Get.snackbar(
-          'Unable to make call',
-          'Please call us at +91 $supportPhoneNumber',
-          snackPosition: SnackPosition.BOTTOM,
-          margin: const EdgeInsets.all(16),
-          borderRadius: 15,
-          backgroundColor: Colors.red.shade400,
-          colorText: Colors.white,
-        );
-      }
-    } catch (e) {
-      Get.snackbar(
-        'Unable to make call',
-        'Please call us at +91 $supportPhoneNumber',
-        snackPosition: SnackPosition.BOTTOM,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 15,
-        backgroundColor: Colors.red.shade400,
-        colorText: Colors.white,
-      );
-    }
-  }
-
-  // ============================================================
-  // WHATSAPP ERROR
-  // ============================================================
 
   void _showWhatsAppError() {
     Get.snackbar(
@@ -229,221 +127,518 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // ============================================================
-  // BUILD
-  // ============================================================
+  // ==========================================================
+  // CALL SUPPORT
+  // ==========================================================
 
-  @override
-  Widget build(BuildContext context) {
-    final ProfileController controller = Get.find<ProfileController>();
-    final SignupController authController = Get.find<SignupController>();
-    final ProfileAdController adController = Get.put(ProfileAdController());
+  Future<void> _callSupport() async {
+    final Uri phoneUri = Uri(
+      scheme: 'tel',
+      path: supportPhoneNumber,
+    );
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: SafeArea(
-        child: Obx(() {
-          if (controller.isLoading.value &&
-              controller.user.value.name == 'Guest') {
-            return const Center(
-              child: CircularProgressIndicator(
-                color: primaryDark,
-              ),
-            );
-          }
+    try {
+      final bool opened = await launchUrl(
+        phoneUri,
+        mode: LaunchMode.externalApplication,
+      );
 
-          if (controller.errorMessage.value.isNotEmpty) {
-            return _buildErrorState(controller);
-          }
+      if (!opened) {
+        _showCallError();
+      }
+    } catch (e) {
+      debugPrint('Call error: $e');
+      _showCallError();
+    }
+  }
 
-          return RefreshIndicator(
-            color: primaryDark,
-            backgroundColor: Colors.white,
-            onRefresh: () => controller.fetchUserProfile(),
-            child: CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverToBoxAdapter(
-                  child: _buildHeader(controller),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    18,
-                    0,
-                    18,
-                    30,
-                  ),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate(
-                      [
-                        _buildSectionTitle(
-                          title: "Personal Information",
-                          icon: Icons.person_outline_rounded,
-                          color: primaryDark,
-                          background: primaryLight,
-                        ),
+  void _showCallError() {
+    Get.snackbar(
+      'Unable to make call',
+      'Please call +91 $supportPhoneNumber',
+      snackPosition: SnackPosition.BOTTOM,
+      margin: const EdgeInsets.all(16),
+      borderRadius: 15,
+      backgroundColor: Colors.red.shade400,
+      colorText: Colors.white,
+    );
+  }
 
-                        const SizedBox(height: 12),
+  // ==========================================================
+  // POLICY
+  // ==========================================================
 
-                        _buildInformationCard(
-                          children: [
-                            _buildInfoItem(
-                              icon: Icons.badge_outlined,
-                              title: "Enrollment",
-                              value: controller.user.value.enrollmentNo,
-                              iconColor: primaryDark,
-                              iconBackground: primaryLight,
-                            ),
-                            _divider(),
-                            _buildInfoItem(
-                              icon: Icons.phone_outlined,
-                              title: "Phone Number",
-                              value: controller.user.value.phonenumber,
-                              iconColor: primaryDark,
-                              iconBackground: primaryLight,
-                            ),
-                          ],
-                        ),
+  Future<void> _openPolicyLink() async {
+    final Uri url = Uri.parse(policyWebLink);
 
-                        const SizedBox(height: 28),
+    try {
+      final bool opened = await launchUrl(
+        url,
+        mode: LaunchMode.externalApplication,
+      );
 
-                        _buildSectionTitle(
-                          title: "Academic Details",
-                          icon: Icons.school_outlined,
-                          color: secondaryDark,
-                          background: secondaryLight,
-                        ),
+      if (!opened) {
+        Get.snackbar(
+          'Unable to open link',
+          'Please try again later.',
+          snackPosition: SnackPosition.BOTTOM,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 15,
+          backgroundColor: Colors.red.shade400,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      debugPrint('Policy link error: $e');
+    }
+  }
 
-                        const SizedBox(height: 12),
+  // ==========================================================
+  // FEEDBACK
+  // ==========================================================
 
-                        _buildInformationCard(
-                          children: [
-                            _buildInfoItem(
-                              icon: Icons.menu_book_rounded,
-                              title: "Course",
-                              value: controller.user.value.course,
-                              iconColor: secondaryDark,
-                              iconBackground: secondaryLight,
-                            ),
-                            _divider(),
-                            _buildInfoItem(
-                              icon: Icons.calendar_month_outlined,
-                              title: "Year",
-                              value: controller.user.value.year,
-                              iconColor: secondaryDark,
-                              iconBackground: secondaryLight,
-                            ),
-                            _divider(),
-                            _buildInfoItem(
-                              icon: Icons.meeting_room_outlined,
-                              title: "Room Number",
-                              value: controller.user.value.room,
-                              iconColor: secondaryDark,
-                              iconBackground: secondaryLight,
-                            ),
-                          ],
-                        ),
+  void _openFeedback() {
+    Get.dialog(
+      const FeedbackDialog(),
+      barrierDismissible: true,
+      barrierColor: Colors.black54,
+    );
+  }
 
-                        const SizedBox(height: 28),
+  // ==========================================================
+  // DELETE ACCOUNT
+  // ==========================================================
 
-                        _buildSectionTitle(
-                          title: "Activity",
-                          icon: Icons.history_rounded,
-                          color: primaryDark,
-                          background: primaryLight,
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        _buildHistoryCard(),
-
-                        const SizedBox(height: 28),
-
-                        _buildSectionTitle(
-                          title: "Help & Support",
-                          icon: Icons.support_agent_rounded,
-                          color: secondaryDark,
-                          background: secondaryLight,
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        _buildSupportCard(),
-
-                        const SizedBox(height: 28),
-
-                        _buildSectionTitle(
-                          title: "Policies & Terms",
-                          icon: Icons.privacy_tip_outlined,
-                          color: primaryDark,
-                          background: primaryLight,
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        _buildPolicyCard(),
-
-                        const SizedBox(height: 28),
-
-                        if (!kIsWeb) _buildAdvertisement(adController),
-
-                        if (!kIsWeb) const SizedBox(height: 28),
-
-                        // ======================================
-                        // ACCOUNT DELETION & LOGOUT
-                        // ======================================
-
-                        _buildDeleteAccountButton(controller),
-
-                        const SizedBox(height: 12),
-
-                        _buildLogoutButton(authController),
-
-                        const SizedBox(height: 24),
-
-                        Center(
-                          child: Text(
-                            "from",
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: const Color.fromARGB(255, 2, 176, 245)
-                                  .withOpacity(0.70),
-                              fontWeight: FontWeight.w300,
-                            ),
-                          ),
-                        ),
-                        Center(
-                          child: Text(
-                            "Avugaddi Software Systems",
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: lightTextColor.withOpacity(0.70),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 18),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+  void _showDeleteAccountDialog() {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        title: const Row(
+          children: [
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.red,
             ),
-          );
-        }),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Delete Account?',
+                style: TextStyle(
+                  color: darkTextColor,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'This action is permanent and cannot be undone. '
+          'Your account data and meal history will be deleted.',
+          style: TextStyle(
+            color: lightTextColor,
+            fontSize: 14,
+            height: 1.4,
+          ),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Get.back();
+            },
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: lightTextColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+
+              Future.microtask(() {
+                if (Get.isRegistered<ProfileController>()) {
+                  controller.deleteAccount();
+                }
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(13),
+              ),
+            ),
+            child: const Text(
+              'Delete Account',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // ============================================================
-  // PROFILE HEADER
-  // ============================================================
+  // ==========================================================
+  // LOGOUT
+  // ==========================================================
 
-  Widget _buildHeader(ProfileController controller) {
+  void _showLogoutDialog() {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        title: const Row(
+          children: [
+            Icon(
+              Icons.logout_rounded,
+              color: Colors.red,
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Logout?',
+                style: TextStyle(
+                  color: darkTextColor,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to logout from your account?',
+          style: TextStyle(
+            color: lightTextColor,
+            fontSize: 14,
+          ),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Get.back();
+            },
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: lightTextColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+
+              Future.microtask(() {
+                authController.logout();
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade500,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(13),
+              ),
+            ),
+            child: const Text(
+              'Logout',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==========================================================
+  // BUILD
+  // ==========================================================
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: SafeArea(
+        child: Obx(
+          () {
+            if (controller.isLoading.value &&
+                controller.user.value.name == 'Guest') {
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: primaryDark,
+                ),
+              );
+            }
+
+            if (controller.errorMessage.value.isNotEmpty) {
+              return _buildErrorState();
+            }
+
+            return RefreshIndicator(
+              color: primaryDark,
+              backgroundColor: Colors.white,
+              onRefresh: () {
+                return controller.fetchUserProfile();
+              },
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: _buildHeader(),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 35),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate(
+                        [
+                          // ==================================================
+                          // PERSONAL INFORMATION
+                          // ==================================================
+
+                          _buildSectionTitle(
+                            title: 'Personal Information',
+                            icon: Icons.person_outline_rounded,
+                            color: primaryDark,
+                            background: primaryLight,
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          _buildInformationCard(
+                            children: [
+                              _buildInfoItem(
+                                icon: Icons.badge_outlined,
+                                title: 'Enrollment',
+                                value: controller.user.value.enrollmentNo,
+                                iconColor: primaryDark,
+                                iconBackground: primaryLight,
+                              ),
+                              _divider(),
+                              _buildInfoItem(
+                                icon: Icons.phone_outlined,
+                                title: 'Phone Number',
+                                value: controller.user.value.phonenumber,
+                                iconColor: primaryDark,
+                                iconBackground: primaryLight,
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 28),
+
+                          // ==================================================
+                          // ACADEMIC DETAILS
+                          // ==================================================
+
+                          _buildSectionTitle(
+                            title: 'Academic Details',
+                            icon: Icons.school_outlined,
+                            color: secondaryDark,
+                            background: secondaryLight,
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          _buildInformationCard(
+                            children: [
+                              _buildInfoItem(
+                                icon: Icons.menu_book_rounded,
+                                title: 'Course',
+                                value: controller.user.value.course,
+                                iconColor: secondaryDark,
+                                iconBackground: secondaryLight,
+                              ),
+                              _divider(),
+                              _buildInfoItem(
+                                icon: Icons.calendar_month_outlined,
+                                title: 'Year',
+                                value: controller.user.value.year.toString(),
+                                iconColor: secondaryDark,
+                                iconBackground: secondaryLight,
+                              ),
+                              _divider(),
+                              _buildInfoItem(
+                                icon: Icons.meeting_room_outlined,
+                                title: 'Room Number',
+                                value: controller.user.value.room.toString(),
+                                iconColor: secondaryDark,
+                                iconBackground: secondaryLight,
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 28),
+
+                          // ==================================================
+                          // MEAL MANAGEMENT
+                          // ==================================================
+
+                          _buildSectionTitle(
+                            title: 'Meal Management',
+                            icon: Icons.restaurant_menu_rounded,
+                            color: primaryDark,
+                            background: primaryLight,
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          _buildHistoryCard(),
+
+                          const SizedBox(height: 28),
+
+                          // ==================================================
+                          // FEEDBACK
+                          // ==================================================
+
+                          _buildSectionTitle(
+                            title: 'Your Feedback',
+                            icon: Icons.rate_review_rounded,
+                            color: primaryDark,
+                            background: primaryLight,
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          _buildFeedbackCard(),
+
+                          const SizedBox(height: 28),
+
+                          // ==================================================
+                          // HELP
+                          // ==================================================
+
+                          _buildSectionTitle(
+                            title: 'Help & Support',
+                            icon: Icons.support_agent_rounded,
+                            color: secondaryDark,
+                            background: secondaryLight,
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          _buildSupportCard(),
+
+                          const SizedBox(height: 28),
+
+                          // ==================================================
+                          // POLICIES
+                          // ==================================================
+
+                          _buildSectionTitle(
+                            title: 'Policies & Terms',
+                            icon: Icons.privacy_tip_outlined,
+                            color: primaryDark,
+                            background: primaryLight,
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          _buildPolicyCard(),
+
+                          const SizedBox(height: 30),
+
+                          // ==================================================
+                          // ACCOUNT ACTIONS
+                          // ==================================================
+
+                          const Text(
+                            'Account',
+                            style: TextStyle(
+                              color: darkTextColor,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          _buildDeleteAccountButton(),
+
+                          const SizedBox(height: 12),
+
+                          _buildLogoutButton(),
+
+                          const SizedBox(height: 25),
+
+                          const Center(
+                            child: Text(
+                              'from',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: lightTextColor,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 4),
+
+                          const Center(
+                            child: Text(
+                              'Avugaddi Software Systems',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: lightTextColor,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // ==========================================================
+  // HEADER
+  // ==========================================================
+
+  Widget _buildHeader() {
+    final String name = controller.user.value.name.trim().isEmpty
+        ? 'Student'
+        : controller.user.value.name;
+
+    final String email = controller.user.value.email.trim().isEmpty
+        ? 'No email available'
+        : controller.user.value.email;
+
     return Container(
       margin: const EdgeInsets.fromLTRB(18, 14, 18, 28),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 26),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 25),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -453,14 +648,13 @@ class ProfileScreen extends StatelessWidget {
             Color(0xFFFFE99A),
             Color(0xFFFFF3C4),
           ],
-          stops: [0.0, 0.55, 1.0],
         ),
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.30),
-            blurRadius: 25,
-            offset: const Offset(0, 10),
+            color: primaryColor.withOpacity(0.28),
+            blurRadius: 24,
+            offset: const Offset(0, 9),
           ),
         ],
       ),
@@ -471,7 +665,7 @@ class ProfileScreen extends StatelessWidget {
             children: [
               _headerIcon(Icons.person_outline_rounded),
               const Text(
-                "My Profile",
+                'My Profile',
                 style: TextStyle(
                   color: darkTextColor,
                   fontSize: 18,
@@ -481,12 +675,12 @@ class ProfileScreen extends StatelessWidget {
               _headerIcon(Icons.verified_user_outlined),
             ],
           ),
-          const SizedBox(height: 26),
+          const SizedBox(height: 25),
           Container(
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.60),
+              color: Colors.white.withOpacity(0.65),
             ),
             child: Container(
               height: 100,
@@ -496,7 +690,7 @@ class ProfileScreen extends StatelessWidget {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
+                    color: Colors.black.withOpacity(0.07),
                     blurRadius: 18,
                     offset: const Offset(0, 6),
                   ),
@@ -509,22 +703,19 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 17),
           Text(
-            controller.user.value.name.isEmpty
-                ? "Student"
-                : controller.user.value.name,
+            name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: darkTextColor,
-              fontSize: 24,
+              fontSize: 23,
               fontWeight: FontWeight.w800,
-              letterSpacing: -0.4,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 7),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -536,32 +727,29 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(width: 7),
               Flexible(
                 child: Text(
-                  controller.user.value.email.isEmpty
-                      ? "No email available"
-                      : controller.user.value.email,
+                  email,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: darkTextColor.withOpacity(0.68),
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           Container(
             padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 9,
+              horizontal: 15,
+              vertical: 8,
             ),
             decoration: BoxDecoration(
               color: secondaryLight,
               borderRadius: BorderRadius.circular(30),
               border: Border.all(
                 color: secondaryColor,
-                width: 1,
               ),
             ),
             child: const Row(
@@ -574,10 +762,10 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 SizedBox(width: 7),
                 Text(
-                  "Active Student",
+                  'Active Student',
                   style: TextStyle(
                     color: secondaryDark,
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -588,10 +776,6 @@ class ProfileScreen extends StatelessWidget {
       ),
     );
   }
-
-  // ============================================================
-  // HEADER ICON
-  // ============================================================
 
   Widget _headerIcon(IconData icon) {
     return Container(
@@ -612,9 +796,9 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // ============================================================
+  // ==========================================================
   // SECTION TITLE
-  // ============================================================
+  // ==========================================================
 
   Widget _buildSectionTitle({
     required String title,
@@ -644,25 +828,31 @@ class ProfileScreen extends StatelessWidget {
             color: darkTextColor,
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            letterSpacing: -0.2,
           ),
         ),
       ],
     );
   }
 
-  // ============================================================
+  // ==========================================================
   // INFORMATION CARD
-  // ============================================================
+  // ==========================================================
 
-  Widget _buildInformationCard({required List<Widget> children}) {
+  Widget _buildInformationCard({
+    required List<Widget> children,
+  }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 5,
+      ),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFF0F0EA)),
+        border: Border.all(
+          color: const Color(0xFFF0F0EA),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.035),
@@ -671,13 +861,11 @@ class ProfileScreen extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(children: children),
+      child: Column(
+        children: children,
+      ),
     );
   }
-
-  // ============================================================
-  // INFORMATION ITEM
-  // ============================================================
 
   Widget _buildInfoItem({
     required IconData icon,
@@ -686,7 +874,7 @@ class ProfileScreen extends StatelessWidget {
     required Color iconColor,
     required Color iconBackground,
   }) {
-    final String displayValue = value.trim().isEmpty ? "Not available" : value;
+    final String displayValue = value.trim().isEmpty ? 'Not available' : value;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -721,9 +909,11 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   displayValue,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: darkTextColor,
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -735,10 +925,6 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // ============================================================
-  // DIVIDER
-  // ============================================================
-
   Widget _divider() {
     return const Divider(
       height: 1,
@@ -747,22 +933,69 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // ============================================================
-  // HISTORY CARD
-  // ============================================================
+  // ==========================================================
+  // ACTION CARDS
+  // ==========================================================
+
+  Widget _buildMealSkippingCard() {
+    return _buildActionCard(
+      icon: Icons.no_meals_rounded,
+      iconColor: secondaryDark,
+      iconBackground: secondaryLight,
+      title: 'Meal Skipping',
+      subtitle: 'Skip a meal when you are not going to eat at the mess.',
+      onTap: () {
+        Get.to(() => MealSkippingscreen());
+      },
+    );
+  }
 
   Widget _buildHistoryCard() {
+    return _buildActionCard(
+      icon: Icons.history_rounded,
+      iconColor: primaryDark,
+      iconBackground: primaryLight,
+      title: 'Meal History',
+      subtitle: 'View your previous meal activity.',
+      onTap: () {
+        Get.to(() => HistoryScreen());
+      },
+    );
+  }
+
+  Widget _buildFeedbackCard() {
+    return _buildActionCard(
+      icon: Icons.rate_review_rounded,
+      iconColor: primaryDark,
+      iconBackground: primaryLight,
+      title: 'Share Your Feedback',
+      subtitle: 'Rate food, service and app experience.',
+      onTap: _openFeedback,
+    );
+  }
+
+  Widget _buildActionCard({
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBackground,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => Get.to(() => HistoryScreen()),
+        onTap: onTap,
         borderRadius: BorderRadius.circular(22),
         child: Ink(
+          width: double.infinity,
           padding: const EdgeInsets.all(17),
           decoration: BoxDecoration(
             color: cardColor,
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0xFFF0F0EA)),
+            border: Border.all(
+              color: const Color(0xFFF0F0EA),
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.035),
@@ -774,53 +1007,57 @@ class ProfileScreen extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                height: 52,
-                width: 52,
+                height: 56,
+                width: 56,
                 decoration: BoxDecoration(
-                  color: primaryLight,
-                  borderRadius: BorderRadius.circular(16),
+                  color: iconBackground,
+                  borderRadius: BorderRadius.circular(17),
                 ),
-                child: const Icon(
-                  Icons.history_rounded,
-                  color: primaryDark,
-                  size: 26,
+                child: Icon(
+                  icon,
+                  color: iconColor,
+                  size: 27,
                 ),
               ),
               const SizedBox(width: 15),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Meal History",
-                      style: TextStyle(
+                      title,
+                      style: const TextStyle(
                         color: darkTextColor,
                         fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 5),
                     Text(
-                      "View your previous activity",
-                      style: TextStyle(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
                         color: lightTextColor,
-                        fontSize: 12,
+                        fontSize: 11.5,
+                        height: 1.4,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 10),
               Container(
-                height: 38,
-                width: 38,
+                height: 40,
+                width: 40,
                 decoration: BoxDecoration(
-                  color: primaryLight,
-                  borderRadius: BorderRadius.circular(12),
+                  color: iconBackground,
+                  borderRadius: BorderRadius.circular(13),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.arrow_forward_ios_rounded,
-                  color: primaryDark,
+                  color: iconColor,
                   size: 15,
                 ),
               ),
@@ -831,93 +1068,9 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // ============================================================
-  // POLICY & TERMS CARD
-  // ============================================================
-
-  Widget _buildPolicyCard() {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: _openPolicyLink,
-        borderRadius: BorderRadius.circular(22),
-        child: Ink(
-          padding: const EdgeInsets.all(17),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0xFFF0F0EA)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.035),
-                blurRadius: 18,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                height: 52,
-                width: 52,
-                decoration: BoxDecoration(
-                  color: primaryLight,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.policy_rounded,
-                  color: primaryDark,
-                  size: 26,
-                ),
-              ),
-              const SizedBox(width: 15),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Privacy Policy & Terms",
-                      style: TextStyle(
-                        color: darkTextColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      "View our policies, terms, and menu pricing",
-                      style: TextStyle(
-                        color: lightTextColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                height: 38,
-                width: 38,
-                decoration: BoxDecoration(
-                  color: primaryLight,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.open_in_new_rounded,
-                  color: primaryDark,
-                  size: 16,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ============================================================
-  // HELP & SUPPORT CARD
-  // ============================================================
+  // ==========================================================
+  // SUPPORT CARD
+  // ==========================================================
 
   Widget _buildSupportCard() {
     return Container(
@@ -926,7 +1079,9 @@ class ProfileScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFF0F0EA)),
+        border: Border.all(
+          color: const Color(0xFFF0F0EA),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.035),
@@ -936,13 +1091,12 @@ class ProfileScreen extends StatelessWidget {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                height: 52,
-                width: 52,
+                height: 54,
+                width: 54,
                 decoration: BoxDecoration(
                   color: secondaryLight,
                   borderRadius: BorderRadius.circular(16),
@@ -950,7 +1104,7 @@ class ProfileScreen extends StatelessWidget {
                 child: const Icon(
                   Icons.headset_mic_rounded,
                   color: secondaryDark,
-                  size: 25,
+                  size: 26,
                 ),
               ),
               const SizedBox(width: 14),
@@ -959,20 +1113,19 @@ class ProfileScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Need some help?",
+                      'Need some help?',
                       style: TextStyle(
                         color: darkTextColor,
                         fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    SizedBox(height: 3),
+                    SizedBox(height: 4),
                     Text(
                       "We're here to help with any issue.",
                       style: TextStyle(
                         color: lightTextColor,
-                        fontSize: 11,
-                        height: 1.4,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -984,14 +1137,13 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 17),
           SizedBox(
             width: double.infinity,
-            height: 52,
+            height: 51,
             child: ElevatedButton(
               onPressed: _openWhatsApp,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF25D366),
                 foregroundColor: Colors.white,
                 elevation: 0,
-                shadowColor: Colors.transparent,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
@@ -999,17 +1151,23 @@ class ProfileScreen extends StatelessWidget {
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.chat_rounded, size: 20),
+                  Icon(
+                    Icons.chat_rounded,
+                    size: 20,
+                  ),
                   SizedBox(width: 8),
                   Text(
-                    "Chat on WhatsApp",
+                    'Chat on WhatsApp',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   SizedBox(width: 7),
-                  Icon(Icons.arrow_forward_rounded, size: 17),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 17,
+                  ),
                 ],
               ),
             ),
@@ -1022,7 +1180,9 @@ class ProfileScreen extends StatelessWidget {
               onPressed: _callSupport,
               style: OutlinedButton.styleFrom(
                 foregroundColor: darkTextColor,
-                side: const BorderSide(color: Color(0xFFEAEAE5)),
+                side: const BorderSide(
+                  color: Color(0xFFEAEAE5),
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
@@ -1030,10 +1190,14 @@ class ProfileScreen extends StatelessWidget {
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.phone_outlined, size: 18, color: darkTextColor),
+                  Icon(
+                    Icons.phone_outlined,
+                    size: 18,
+                    color: darkTextColor,
+                  ),
                   SizedBox(width: 8),
                   Text(
-                    "+91 93983 15945",
+                    '+91 93983 15945',
                     style: TextStyle(
                       color: darkTextColor,
                       fontSize: 12,
@@ -1048,10 +1212,14 @@ class ProfileScreen extends StatelessWidget {
           const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.verified_outlined, size: 13, color: lightTextColor),
+              Icon(
+                Icons.verified_outlined,
+                size: 13,
+                color: lightTextColor,
+              ),
               SizedBox(width: 5),
               Text(
-                "Chef Hospitality Support",
+                'Chef Hospitality Support',
                 style: TextStyle(
                   color: lightTextColor,
                   fontSize: 10,
@@ -1065,90 +1233,38 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // ============================================================
-  // ADVERTISEMENT
-  // ============================================================
+  // ==========================================================
+  // POLICY CARD
+  // ==========================================================
 
-  Widget _buildAdvertisement(ProfileAdController adController) {
-    return Obx(() {
-      if (adController.isAdLoaded.value && adController.nativeAd != null) {
-        return Container(
-          width: double.infinity,
-          height: 340,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0xFFF0F0EA)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: AdWidget(
-            key: ValueKey(adController.nativeAd.hashCode),
-            ad: adController.nativeAd!,
-          ),
-        );
-      }
-
-      return Container(
-        width: double.infinity,
-        height: 100,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xFFF0F0EA)),
-        ),
-        child: const Center(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                height: 17,
-                width: 17,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: primaryDark,
-                ),
-              ),
-              SizedBox(width: 12),
-              Text(
-                "Loading advertisement...",
-                style: TextStyle(
-                  color: lightTextColor,
-                  fontSize: 13,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    });
+  Widget _buildPolicyCard() {
+    return _buildActionCard(
+      icon: Icons.policy_rounded,
+      iconColor: primaryDark,
+      iconBackground: primaryLight,
+      title: 'Privacy Policy & Terms',
+      subtitle: 'View our policies, terms and conditions.',
+      onTap: _openPolicyLink,
+    );
   }
 
-  // ============================================================
-  // DELETE ACCOUNT BUTTON
-  // ============================================================
+  // ==========================================================
+  // DELETE ACCOUNT & LOGOUT BUTTONS
+  // ==========================================================
 
-  Widget _buildDeleteAccountButton(ProfileController profileController) {
+  Widget _buildDeleteAccountButton() {
     return SizedBox(
       width: double.infinity,
       height: 52,
       child: OutlinedButton(
-        onPressed: () {
-          _showDeleteAccountDialog(profileController);
-        },
+        onPressed: _showDeleteAccountDialog,
         style: OutlinedButton.styleFrom(
           foregroundColor: Colors.red.shade700,
           side: BorderSide(
             color: Colors.red.shade200,
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(17),
           ),
         ),
         child: Row(
@@ -1161,10 +1277,10 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(width: 9),
             Text(
-              "Delete Account",
+              'Delete Account',
               style: TextStyle(
                 color: Colors.red.shade700,
-                fontSize: 15,
+                fontSize: 14,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -1174,100 +1290,18 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // ============================================================
-  // DELETE ACCOUNT CONFIRMATION DIALOG
-  // ============================================================
-
-  void _showDeleteAccountDialog(ProfileController profileController) {
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        title: const Row(
-          children: [
-            Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.red,
-            ),
-            SizedBox(width: 10),
-            Text(
-              "Delete Account?",
-              style: TextStyle(
-                color: darkTextColor,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        content: const Text(
-          "This action is permanent and cannot be undone. All your account data and history will be completely erased.",
-          style: TextStyle(
-            color: lightTextColor,
-            fontSize: 14,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Get.back();
-            },
-            child: const Text(
-              "Cancel",
-              style: TextStyle(
-                color: lightTextColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              profileController.deleteAccount();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              "Permanently Delete",
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ============================================================
-  // LOGOUT BUTTON
-  // ============================================================
-
-  Widget _buildLogoutButton(SignupController authController) {
+  Widget _buildLogoutButton() {
     return SizedBox(
       width: double.infinity,
-      height: 56,
+      height: 54,
       child: ElevatedButton(
-        onPressed: () {
-          _showLogoutDialog(authController);
-        },
+        onPressed: _showLogoutDialog,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFFFFEEEE),
           foregroundColor: Colors.red.shade500,
           elevation: 0,
-          shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-            side: BorderSide(
-              color: Colors.red.withOpacity(0.08),
-            ),
+            borderRadius: BorderRadius.circular(17),
           ),
         ),
         child: Row(
@@ -1280,10 +1314,10 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(width: 9),
             Text(
-              "Logout",
+              'Logout',
               style: TextStyle(
                 color: Colors.red.shade500,
-                fontSize: 15,
+                fontSize: 14,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -1293,83 +1327,11 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // ============================================================
-  // LOGOUT DIALOG
-  // ============================================================
+  // ==========================================================
+  // ERROR STATE
+  // ==========================================================
 
-  void _showLogoutDialog(SignupController authController) {
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        title: const Row(
-          children: [
-            Icon(
-              Icons.logout_rounded,
-              color: Colors.red,
-            ),
-            SizedBox(width: 10),
-            Text(
-              "Logout?",
-              style: TextStyle(
-                color: darkTextColor,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        content: const Text(
-          "Are you sure you want to logout from your account?",
-          style: TextStyle(
-            color: lightTextColor,
-            fontSize: 14,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Get.back();
-            },
-            child: const Text(
-              "Cancel",
-              style: TextStyle(
-                color: lightTextColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              authController.logout();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade400,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              "Logout",
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ============================================================
-  // ERROR SCREEN
-  // ============================================================
-
-  Widget _buildErrorState(ProfileController controller) {
+  Widget _buildErrorState() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(30),
@@ -1391,7 +1353,7 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             const Text(
-              "Something went wrong",
+              'Something went wrong',
               style: TextStyle(
                 color: darkTextColor,
                 fontSize: 20,
@@ -1412,8 +1374,12 @@ class ProfileScreen extends StatelessWidget {
               onPressed: () {
                 controller.fetchUserProfile();
               },
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text("Try Again"),
+              icon: const Icon(
+                Icons.refresh_rounded,
+              ),
+              label: const Text(
+                'Try Again',
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 foregroundColor: darkTextColor,
@@ -1428,6 +1394,532 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// FEEDBACK DIALOG (FIXED)
+// ============================================================
+
+class FeedbackDialog extends StatefulWidget {
+  const FeedbackDialog({super.key});
+
+  @override
+  State<FeedbackDialog> createState() => _FeedbackDialogState();
+}
+
+class _FeedbackDialogState extends State<FeedbackDialog> {
+  int _selectedRating = 5;
+  bool _isSubmitting = false;
+  String _message = '';
+
+  final Set<String> _selectedTags = <String>{};
+
+  final List<Map<String, dynamic>> _feedbackTags = [
+    {'title': 'Food quality', 'icon': Icons.restaurant_rounded},
+    {'title': 'Taste', 'icon': Icons.restaurant_menu_rounded},
+    {'title': 'Cleanliness', 'icon': Icons.cleaning_services_rounded},
+    {'title': 'Food quantity', 'icon': Icons.scale_rounded},
+    {'title': 'Service', 'icon': Icons.support_agent_rounded},
+    {'title': 'Menu', 'icon': Icons.menu_book_rounded},
+    {'title': 'App experience', 'icon': Icons.phone_android_rounded},
+    {'title': 'App issue', 'icon': Icons.bug_report_outlined},
+  ];
+
+  String get _ratingText {
+    switch (_selectedRating) {
+      case 1:
+        return 'Very poor';
+      case 2:
+        return 'Poor';
+      case 3:
+        return 'Average';
+      case 4:
+        return 'Good';
+      case 5:
+      default:
+        return 'Excellent';
+    }
+  }
+
+  Future<void> _submitFeedback() async {
+    if (_isSubmitting) return;
+
+    final String cleanMessage = _message.trim();
+
+    if (cleanMessage.isEmpty && _selectedTags.isEmpty) {
+      _showRequiredMessage();
+      return;
+    }
+
+    final List<String> parts = [];
+    if (_selectedTags.isNotEmpty) {
+      parts.add('Feedback areas: ${_selectedTags.join(', ')}');
+    }
+    if (cleanMessage.isNotEmpty) {
+      parts.add(cleanMessage);
+    }
+
+    final String finalMessage = parts.join('\n\n');
+    final ProfileController profileController = Get.find<ProfileController>();
+
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final bool success = await profileController.sendFeedback(
+        _selectedRating,
+        finalMessage,
+      );
+
+      if (!mounted) return;
+
+      if (success) {
+        // Pop dialog directly via Flutter's Navigator so it never gets blocked by GetX snackbar
+        Navigator.of(context, rootNavigator: true).pop();
+      } else {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error sending feedback: $e');
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  void _showRequiredMessage() {
+    Get.snackbar(
+      'Feedback required',
+      'Please select an option or write a comment.',
+      snackPosition: SnackPosition.BOTTOM,
+      margin: const EdgeInsets.all(16),
+      borderRadius: 15,
+      backgroundColor: darkTextColor,
+      colorText: Colors.white,
+    );
+  }
+
+  void _toggleTag(String title) {
+    if (_isSubmitting) return;
+
+    setState(() {
+      if (_selectedTags.contains(title)) {
+        _selectedTags.remove(title);
+      } else {
+        _selectedTags.add(title);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 18,
+      ),
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: EdgeInsets.only(
+          bottom: keyboardHeight > 0 ? 5 : 0,
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.90,
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: Column(
+              children: [
+                _buildDialogHeader(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.fromLTRB(20, 5, 20, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildRatingSection(),
+                        const SizedBox(height: 24),
+                        _buildTagSection(),
+                        const SizedBox(height: 24),
+                        _buildCommentSection(),
+                        const SizedBox(height: 15),
+                      ],
+                    ),
+                  ),
+                ),
+                _buildSubmitButton(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDialogHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 18, 14, 12),
+      child: Row(
+        children: [
+          Container(
+            height: 48,
+            width: 48,
+            decoration: BoxDecoration(
+              color: primaryLight,
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: const Icon(
+              Icons.rate_review_rounded,
+              color: primaryDark,
+              size: 25,
+            ),
+          ),
+          const SizedBox(width: 13),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Share Your Feedback',
+                  style: TextStyle(
+                    color: darkTextColor,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                SizedBox(height: 3),
+                Text(
+                  'Your feedback helps us improve.',
+                  style: TextStyle(
+                    color: lightTextColor,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Material(
+            color: const Color(0xFFF8F8F5),
+            borderRadius: BorderRadius.circular(13),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(13),
+              onTap: _isSubmitting
+                  ? null
+                  : () {
+                      FocusScope.of(context).unfocus();
+                      Navigator.of(context, rootNavigator: true).pop();
+                    },
+              child: const SizedBox(
+                height: 42,
+                width: 42,
+                child: Icon(
+                  Icons.close_rounded,
+                  color: darkTextColor,
+                  size: 21,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRatingSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'How was your experience?',
+          style: TextStyle(
+            color: darkTextColor,
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 5),
+        const Text(
+          'Give us a rating for your overall mess experience.',
+          style: TextStyle(
+            color: lightTextColor,
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 7),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFCFCF9),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: const Color(0xFFF0F0E8),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: List.generate(5, (index) {
+              final int rating = index + 1;
+              final bool selected = rating <= _selectedRating;
+
+              return GestureDetector(
+                onTap: _isSubmitting
+                    ? null
+                    : () {
+                        setState(() {
+                          _selectedRating = rating;
+                        });
+                      },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  height: 48,
+                  width: 48,
+                  decoration: BoxDecoration(
+                    color: selected ? primaryLight : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: selected ? primaryColor : const Color(0xFFE5E5DF),
+                    ),
+                  ),
+                  child: Icon(
+                    selected ? Icons.star_rounded : Icons.star_outline_rounded,
+                    color: selected ? primaryDark : lightTextColor,
+                    size: 27,
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+        const SizedBox(height: 9),
+        Center(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 150),
+            child: Text(
+              _ratingText,
+              key: ValueKey(_ratingText),
+              style: const TextStyle(
+                color: primaryDark,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTagSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'What would you like to tell us?',
+          style: TextStyle(
+            color: darkTextColor,
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 5),
+        const Text(
+          'Select anything that matches your experience.',
+          style: TextStyle(
+            color: lightTextColor,
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 8,
+          runSpacing: 9,
+          children: _feedbackTags.map((tag) {
+            final String title = tag['title'] as String;
+            final IconData icon = tag['icon'] as IconData;
+            final bool selected = _selectedTags.contains(title);
+
+            return GestureDetector(
+              onTap: () => _toggleTag(title),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 9,
+                ),
+                decoration: BoxDecoration(
+                  color: selected ? primaryLight : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: selected ? primaryColor : const Color(0xFFE2E2DD),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      selected ? Icons.check_circle_rounded : icon,
+                      size: 15,
+                      color: selected ? primaryDark : lightTextColor,
+                    ),
+                    const SizedBox(width: 7),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: selected ? darkTextColor : lightTextColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCommentSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Additional comments',
+              style: TextStyle(
+                color: darkTextColor,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            Text(
+              '${_message.length}/500',
+              style: const TextStyle(
+                color: lightTextColor,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFFAFAF7),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: const Color(0xFFF0F0EA),
+            ),
+          ),
+          child: TextField(
+            onChanged: (value) {
+              if (!mounted) return;
+              setState(() {
+                _message = value;
+              });
+            },
+            enabled: !_isSubmitting,
+            maxLength: 500,
+            maxLines: 5,
+            minLines: 4,
+            textInputAction: TextInputAction.newline,
+            keyboardType: TextInputType.multiline,
+            style: const TextStyle(
+              color: darkTextColor,
+              fontSize: 13,
+              height: 1.4,
+            ),
+            decoration: const InputDecoration(
+              counterText: '',
+              hintText: 'Tell us what went well or what we can improve...',
+              hintStyle: TextStyle(
+                color: Color(0xFFAAAFA9),
+                fontSize: 12,
+                height: 1.4,
+              ),
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.all(16),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubmitButton() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 18),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(
+          bottom: Radius.circular(28),
+        ),
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton(
+          onPressed: _isSubmitting ? null : _submitFeedback,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryColor,
+            disabledBackgroundColor: const Color(0xFFE9E5D1),
+            foregroundColor: darkTextColor,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: _isSubmitting
+              ? const SizedBox(
+                  height: 21,
+                  width: 21,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: darkTextColor,
+                  ),
+                )
+              : const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.send_rounded,
+                      size: 18,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'Submit Feedback',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
         ),
       ),
     );

@@ -48,16 +48,19 @@ class HomeScreen extends StatelessWidget {
     switch (mealType) {
       case "Breakfast":
         return currentTime >= (7 * 60 + 50) && currentTime <= (10 * 60 + 20);
+      // return currentTime >= (0 * 60 + 0) && currentTime <= (23 * 60 + 59);
 
       case "Lunch":
         return currentTime >= (11 * 60 + 50) && currentTime <= (14 * 60 + 20);
+      // return currentTime >= (0 * 60 + 0) && currentTime <= (23 * 60 + 59);
 
       case "Snacks":
-            return currentTime >= (16 * 60 + 50) && currentTime <= (18 * 60 + 15);
-       // return currentTime >= (0 * 60 + 0) && currentTime <= (23 * 60 + 59);
+        return currentTime >= (16 * 60 + 50) && currentTime <= (18 * 60 + 15);
+      //return currentTime >= (0 * 60 + 0) && currentTime <= (23 * 60 + 59);
 
       case "Dinner":
         return currentTime >= (19 * 60 + 50) && currentTime <= (21 * 60 + 40);
+      //  return currentTime >= (0 * 60 + 0) && currentTime <= (23 * 60 + 59);
 
       default:
         return false;

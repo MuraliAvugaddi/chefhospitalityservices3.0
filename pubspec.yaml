@@ -2,7 +2,7 @@ name: chefhospitalityservices
 description: "A new Flutter project."
 publish_to: 'none' 
 
-version: 1.0.0+6
+version: 1.0.0+7
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -35,6 +35,7 @@ dependencies:
   url_launcher: ^6.3.2
   qr_flutter: ^4.1.0
   flutter_cashfree_pg_sdk: ^2.4.0+52
+  package_info_plus: ^8.0.0
 
 dev_dependencies:
   flutter_test:
@@ -51,15 +52,12 @@ flutter:
     - assets/images/breakfast.png
     - assets/images/snakes.png
     - assets/images/dinner.png
-    - assets/images/money.png
     - assets/images/time.png
     - assets/images/donephoto.png
     - assets/audio/success-221935.mp3
     - assets/images/cheifimage3d.png
     - assets/images/ChatGPT Image Oct 14, 2025, 11_55_22 PM.png
-    - assets/images/pay1immage.png
     - assets/images/perfect_size.png
-    - assets/images/thankyou.png
     
 
 # Your configuration below is correct.
