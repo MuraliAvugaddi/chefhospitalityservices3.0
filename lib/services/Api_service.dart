@@ -17,7 +17,9 @@ class ApiService {
   /// If the Backend returns 401 (Unauthorized) or 403 (Forbidden),
   /// it means the JWT is dead.
   void _checkTokenExpiry(int statusCode) {
-    if (statusCode == 401 || statusCode == 403) {
+    // ✅ FIX: only 401 means the login is invalid. The backend uses 403 for
+    // "Access expired / meal skipped" — that must NOT log the student out.
+    if (statusCode == 401) {
       // 1. Clear ALL sensitive data from the phone
       box.remove('token');
       box.remove('user_data');

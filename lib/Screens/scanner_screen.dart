@@ -6,6 +6,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+/// Camera permission state for the scanner.
+enum _CamState { checking, granted, denied, permanentlyDenied }
 
 class ScannerScreen extends StatefulWidget {
   final String mealType;
@@ -15,7 +19,10 @@ class ScannerScreen extends StatefulWidget {
   State<ScannerScreen> createState() => _ScannerScreenState();
 }
 
-class _ScannerScreenState extends State<ScannerScreen> {
+class _ScannerScreenState extends State<ScannerScreen>
+    with WidgetsBindingObserver {
+  _CamState _camState = kIsWeb ? _CamState.granted : _CamState.checking;
+
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? controller;
   bool _isScanComplete = false;
@@ -59,8 +66,109 @@ class _ScannerScreenState extends State<ScannerScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadTopBannerAd();
     _loadBottomBannerAd();
+    _checkCameraPermission(askIfNeeded: true);
+  }
+
+  // When the student comes back from phone Settings, check again
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        _camState != _CamState.granted &&
+        _camState != _CamState.checking) {
+      _checkCameraPermission(askIfNeeded: false);
+    }
+  }
+
+  // --- CAMERA PERMISSION ---
+  Future<void> _checkCameraPermission({required bool askIfNeeded}) async {
+    if (kIsWeb) return;
+    var status = await Permission.camera.status;
+    if (!status.isGranted && askIfNeeded && !status.isPermanentlyDenied) {
+      status = await Permission.camera.request();
+    }
+    if (!mounted) return;
+    setState(() {
+      if (status.isGranted || status.isLimited) {
+        _camState = _CamState.granted;
+      } else if (status.isPermanentlyDenied || status.isRestricted) {
+        _camState = _CamState.permanentlyDenied;
+      } else {
+        _camState = _CamState.denied;
+      }
+    });
+  }
+
+  Widget _buildPermissionView() {
+    final permanently = _camState == _CamState.permanentlyDenied;
+    return Container(
+      color: const Color(0xFF111111),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFADD73).withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.photo_camera_rounded,
+                color: Color(0xFFFADD73), size: 42),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Camera permission needed',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+                color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            permanently
+                ? 'Camera access is turned off for this app. Open Settings → Permissions → Camera and choose "Allow", then come back.'
+                : 'To scan the mess QR code and generate your ${widget.mealType} token, please allow camera access.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+                color: Colors.white70, fontSize: 13.5, height: 1.5),
+          ),
+          const SizedBox(height: 28),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                if (permanently) {
+                  await openAppSettings();
+                } else {
+                  await _checkCameraPermission(askIfNeeded: true);
+                }
+              },
+              icon: Icon(permanently ? Icons.settings_rounded : Icons.check_rounded),
+              label: Text(permanently ? 'Open Settings' : 'Allow Camera',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFADD73),
+                foregroundColor: const Color(0xFF252A27),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('Go back',
+                style: GoogleFonts.poppins(color: Colors.white60)),
+          ),
+        ],
+      ),
+    );
   }
 
   // --- Ad loading functions ---
@@ -258,12 +366,23 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
           // QR Scanner View Area
           Expanded(
-            child: Stack(
+            child: _camState == _CamState.checking
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFFFADD73)))
+                : _camState != _CamState.granted
+                    ? _buildPermissionView()
+                    : Stack(
               alignment: Alignment.center,
               children: <Widget>[
                 QRView(
                   key: qrKey,
                   onQRViewCreated: _onQRViewCreated,
+                  // If the camera is refused here, show the permission screen
+                  onPermissionSet: (ctrl, granted) {
+                    if (!granted && mounted) {
+                      _checkCameraPermission(askIfNeeded: false);
+                    }
+                  },
                   overlay: QrScannerOverlayShape(
                     borderColor: Colors.teal,
                     borderRadius: 10,
@@ -315,6 +434,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     controller?.dispose();
     _topBannerAd?.dispose();
     _bottomBannerAd?.dispose();

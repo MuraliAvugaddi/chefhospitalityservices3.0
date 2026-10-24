@@ -13,7 +13,7 @@ class AppUpdateService {
       final int currentBuildNumber = int.tryParse(packageInfo.buildNumber) ?? 1;
 
       final response = await http.get(
-        Uri.parse("${ApiEndpoints.baseUrl}/app-version"),
+        Uri.parse(ApiEndpoints.appVersion),
         headers: {'Content-Type': 'application/json'},
       );
 

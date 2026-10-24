@@ -1,4 +1,5 @@
 import 'package:chefhospitalityservices/api/api_endpoint.dart';
+import 'package:chefhospitalityservices/services/fee_reminder_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
@@ -41,7 +42,26 @@ class SocketService {
         }
       }
     });
+
+    // ✅ Payment approved / cash received → notification + receipt instantly
+    _socket!.on('paymentReceipt', (data) {
+      if (_isMine(data, userId)) FeeReminderService.instance.onReceipt(data);
+    });
+
+    // ✅ Screenshot rejected → notification with reason
+    _socket!.on('paymentReviewed', (data) {
+      if (_isMine(data, userId)) FeeReminderService.instance.onRejected(data);
+    });
+
+    // Re-sync after the phone was offline (missed events)
+    _socket!.onReconnect((_) {
+      _socket!.emit('registerUser', userId);
+      FeeReminderService.instance.sync();
+    });
   }
+
+  bool _isMine(dynamic data, String userId) =>
+      data is Map && (data['userId'] == null || '${data['userId']}' == userId);
 
   void _syncStatusToStorage(dynamic data) {
     bool newStatus = data['isApproved'] ?? false;
@@ -76,4 +96,4 @@ class SocketService {
     _socket?.disconnect();
     _socket = null;
   }
-}
+} 
